@@ -1,0 +1,26 @@
+const express = require('express');
+const router = express.Router();
+const defectController = require('../controllers/defectController');
+const { authenticateToken, checkPrivilege, checkProjectAccess } = require('../middlewares/auth');
+const { validateDefect, validateComment, validateId, validateProjectId, handleValidationErrors } = require('../middlewares/validation');
+
+// Apply authentication to all routes
+router.use(authenticateToken);
+
+// Defect routes for projects
+router.get('/:projectId/defects', validateProjectId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'READ', true), defectController.getProjectDefects);
+router.post('/:projectId/defects', validateProjectId, validateDefect, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'CREATE', true), defectController.createDefect);
+router.get('/:projectId/defects/:id', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'READ', true), defectController.getDefectById);
+router.put('/:projectId/defects/:id', validateProjectId, validateId, validateDefect, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'UPDATE', true), defectController.updateDefect);
+router.delete('/:projectId/defects/:id', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'DELETE', true), defectController.deleteDefect);
+
+// Defect status and assignment
+router.patch('/:projectId/defects/:id/status', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'UPDATE', true), defectController.updateDefectStatus);
+router.patch('/:projectId/defects/:id/assign', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'UPDATE', true), defectController.assignDefect);
+
+// Defect history and comments
+router.get('/:projectId/defects/:id/history', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'READ', true), defectController.getDefectHistory);
+router.get('/:projectId/defects/:id/comments', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'READ', true), defectController.getDefectComments);
+router.post('/:projectId/defects/:id/comments', validateProjectId, validateId, validateComment, handleValidationErrors, checkProjectAccess, checkPrivilege('defects', 'UPDATE', true), defectController.addDefectComment);
+
+module.exports = router;
