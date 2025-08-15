@@ -11,8 +11,10 @@ const { errorHandler, notFound } = require('./middlewares/errorHandler');
 // Import routes
 const apiRoutes = require('./routes');
 
-// Import models to initialize associations 
+// Import models to initialize associations
 const db = require('./models');
+// Optional bootstrap to ensure minimal privileges/allocations exist
+const bootstrap = require('./utils/bootstrap');
 
 // Initialize Express app
 const app = express();
@@ -85,13 +87,19 @@ const startServer = async () => {
     // Test database connection
     await db.sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
-    
+
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
       await db.sequelize.sync({ alter: false });
       console.log('✅ Database synchronized successfully.');
     }
-    
+
+    // Optional bootstrap on start
+    if (process.env.BOOTSTRAP_ON_START === 'true') {
+      console.log('🧩 Running bootstrap initializer...');
+      await bootstrap();
+    }
+
     // Start server
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);

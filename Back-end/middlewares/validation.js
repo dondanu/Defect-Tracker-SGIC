@@ -75,7 +75,16 @@ const validateProject = [
   body('status')
     .optional()
     .isIn(['ACTIVE', 'INACTIVE', 'COMPLETED', 'ON_HOLD'])
-    .withMessage('Status must be one of: ACTIVE, INACTIVE, COMPLETED, ON_HOLD')
+    .withMessage('Status must be one of: ACTIVE, INACTIVE, COMPLETED, ON_HOLD'),
+  // Optional client details
+  body('client_name').optional().trim().isLength({ max: 200 }).withMessage('Client name must be up to 200 chars'),
+  body('client_country').optional().trim().isLength({ max: 100 }).withMessage('Country must be up to 100 chars'),
+  body('client_state').optional().trim().isLength({ max: 100 }).withMessage('State must be up to 100 chars'),
+  body('client_email').optional().isEmail().withMessage('Client email must be valid'),
+  body('client_phone').optional().isLength({ max: 20 }).withMessage('Client phone must be up to 20 chars'),
+  // Optional manager assignment (by name, not ID)
+  body('manager_user_name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Manager user name must be 1-100 chars'),
+  body('manager_designation_name').optional().trim().isLength({ min: 1, max: 100 }).withMessage('Designation name must be 1-100 chars')
 ];
 
 // Module validation rules

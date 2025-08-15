@@ -158,6 +158,26 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: true
       },
+      client_name: {
+        type: Sequelize.STRING(200),
+        allowNull: true
+      },
+      client_country: {
+        type: Sequelize.STRING(100),
+        allowNull: true
+      },
+      client_state: {
+        type: Sequelize.STRING(100),
+        allowNull: true
+      },
+      client_email: {
+        type: Sequelize.STRING(100),
+        allowNull: true
+      },
+      client_phone: {
+        type: Sequelize.STRING(20),
+        allowNull: true
+      },
       status: {
         type: Sequelize.ENUM('ACTIVE', 'INACTIVE', 'COMPLETED', 'ON_HOLD'),
         defaultValue: 'ACTIVE'
