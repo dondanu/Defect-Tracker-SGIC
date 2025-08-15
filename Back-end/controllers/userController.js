@@ -165,7 +165,7 @@ class UserController {
     }
   }
 
-  // Delete user (soft delete by setting is_active to false)
+  // Delete user (hard delete - permanently remove the record)
   async deleteUser(req, res, next) {
     try {
       const { id } = req.params;
@@ -178,11 +178,23 @@ class UserController {
         });
       }
 
-      await user.update({ is_active: false });
+      // Attempt hard delete; return a clear message if there are FK references
+      try {
+        await user.destroy();
+      } catch (err) {
+        const isFKError = err?.name === 'SequelizeForeignKeyConstraintError' || err?.parent?.code === 'ER_ROW_IS_REFERENCED_2';
+        if (isFKError) {
+          return res.status(409).json({
+            success: false,
+            message: 'Cannot delete user because there are related records (projects, allocations, defects, comments, privileges, etc.). Remove or reassign those references first.'
+          });
+        }
+        throw err;
+      }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
-        message: 'User deactivated successfully'
+        message: 'User deleted successfully'
       });
     } catch (error) {
       next(error);
