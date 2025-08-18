@@ -92,9 +92,9 @@ class ProjectController {
   // Get project by ID
   async getProjectById(req, res, next) {
     try {
-      const { id } = req.params;
+      const { projectId } = req.params;
 
-      const project = await Project.findByPk(id, {
+      const project = await Project.findByPk(projectId, {
         where: { is_active: true },
         include: [
           {
@@ -149,7 +149,7 @@ class ProjectController {
         client_state,
         client_email,
         client_phone,
-        manager_user_id,
+        manager_user_name,
         manager_designation_name // optional; human-friendly input from UI
       } = req.body;
 
@@ -168,32 +168,48 @@ class ProjectController {
       });
 
       // If a manager user is selected, allocate them to the project with PM role
-      if (manager_user_id) {
+      if (manager_user_name) {
         let roleId = null;
-        // If designation name provided, prefer mapping role by designation name 'Project Manager'
-        // Otherwise fallback to role named 'Project Manager'
         const designationName = manager_designation_name && manager_designation_name.trim();
-        if (designationName) {
-          const pmRoleByName = await Role.findOne({ where: { name: 'Project Manager', is_active: true } });
-          roleId = pmRoleByName ? pmRoleByName.id : null;
-        } else {
-          const pmRole = await Role.findOne({ where: { name: 'Project Manager', is_active: true } });
-          roleId = pmRole ? pmRole.id : null;
+
+        // Look up the manager user by full name (first_name + last_name) case-insensitive
+        const name = manager_user_name.trim();
+        const [firstPart, ...restParts] = name.split(' ');
+        const firstName = firstPart;
+        const lastName = restParts.join(' ').trim();
+
+        // Build a query that matches either exact full name or partials
+        const nameWhere = lastName
+          ? { [Op.and]: [
+                { first_name: { [Op.like]: firstName } },
+                { last_name: { [Op.like]: lastName } }
+              ] }
+          : { first_name: { [Op.like]: firstName } };
+
+        const managerUser = await User.findOne({ where: { ...nameWhere, is_active: true } });
+        if (!managerUser) {
+          return res.status(400).json({ success: false, message: 'Manager user not found by name' });
         }
 
-        // Optional: verify the provided manager_user_id has the provided designation
+        // If designation name provided, verify the user matches
         if (designationName) {
-          const managerUser = await User.findByPk(manager_user_id);
           const designation = await Designation.findOne({ where: { name: designationName, is_active: true } });
-          if (designation && managerUser && managerUser.designation_id && managerUser.designation_id !== designation.id) {
+          if (!designation) {
+            return res.status(400).json({ success: false, message: 'Designation not found' });
+          }
+          if (managerUser.designation_id && managerUser.designation_id !== designation.id) {
             return res.status(400).json({ success: false, message: 'Selected user does not match the provided designation' });
           }
         }
 
+        // Resolve PM role
+        const pmRole = await Role.findOne({ where: { name: 'Project Manager', is_active: true } });
+        roleId = pmRole ? pmRole.id : null;
+
         if (roleId) {
           const allocation = await ProjectAllocation.create({
             project_id: project.id,
-            user_id: manager_user_id,
+            user_id: managerUser.id,
             role_id: roleId,
             start_date: start_date || new Date(),
             allocation_percentage: 100,
@@ -203,7 +219,7 @@ class ProjectController {
           await ProjectAllocationHistory.create({
             allocation_id: allocation.id,
             project_id: project.id,
-            user_id: manager_user_id,
+            user_id: managerUser.id,
             role_id: roleId,
             action: 'ALLOCATED',
             new_value: '100%',
@@ -257,9 +273,9 @@ class ProjectController {
   // Update project
   async updateProject(req, res, next) {
     try {
-      const { id } = req.params;
+      const { projectId } = req.params;
 
-      const project = await Project.findByPk(id, {
+      const project = await Project.findByPk(projectId, {
         where: { is_active: true }
       });
 
@@ -272,7 +288,7 @@ class ProjectController {
 
       await project.update(req.body);
 
-      const updatedProject = await Project.findByPk(id, {
+      const updatedProject = await Project.findByPk(projectId, {
         include: [
           {
             model: User,
@@ -295,9 +311,9 @@ class ProjectController {
   // Delete project
   async deleteProject(req, res, next) {
     try {
-      const { id } = req.params;
+      const { projectId } = req.params;
 
-      const project = await Project.findByPk(id);
+      const project = await Project.findByPk(projectId);
       if (!project) {
         return res.status(404).json({
           success: false,
