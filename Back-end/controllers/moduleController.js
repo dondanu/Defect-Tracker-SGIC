@@ -89,12 +89,24 @@ class ModuleController {
   // Create new module
   async createModule(req, res, next) {
     try {
-      const { projectId } = req.params;
+      const paramProjectId = req.params.projectId;
+      const bodyProjectId = req.body.project_id;
+      const projectId = paramProjectId || bodyProjectId;
 
-      const moduleData = {
-        ...req.body,
-        project_id: projectId
-      };
+      if (!projectId) {
+        return res.status(400).json({ success: false, message: 'project_id is required' });
+      }
+
+      if (paramProjectId && bodyProjectId && String(paramProjectId) !== String(bodyProjectId)) {
+        return res.status(400).json({ success: false, message: 'project_id in body does not match URL parameter' });
+      }
+
+      const { name } = req.body;
+      if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, message: 'Module name is required' });
+      }
+
+      const moduleData = { name: name.trim(), project_id: projectId };
 
       const module = await Module.create(moduleData);
 
@@ -138,7 +150,8 @@ class ModuleController {
         });
       }
 
-      await module.update(req.body);
+      const { name } = req.body;
+      await module.update({ name });
 
       const updatedModule = await Module.findByPk(id, {
         include: [
@@ -241,11 +254,24 @@ class ModuleController {
   async createSubModule(req, res, next) {
     try {
       const { moduleId } = req.params;
+      const { name, project_id } = req.body;
 
-      const subModuleData = {
-        ...req.body,
-        modules_id: moduleId
-      };
+      if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, message: 'Sub-module name is required' });
+      }
+
+      // project_id is accepted in body for your client request shape, but modules_id is what links to module
+      if (!moduleId && !project_id) {
+        return res.status(400).json({ success: false, message: 'moduleId (URL) or project_id (body) is required' });
+      }
+
+      // If client only supplies project_id, they must also choose a module under that project.
+      // Here we still require moduleId from URL to know where to attach the submodule.
+      if (!moduleId) {
+        return res.status(400).json({ success: false, message: 'moduleId URL parameter is required for submodule creation' });
+      }
+
+      const subModuleData = { name: name.trim(), modules_id: moduleId };
 
       const subModule = await SubModule.create(subModuleData);
 
@@ -289,7 +315,8 @@ class ModuleController {
         });
       }
 
-      await subModule.update(req.body);
+      const { name } = req.body;
+      await subModule.update({ name });
 
       const updatedSubModule = await SubModule.findByPk(subModuleId, {
         include: [
