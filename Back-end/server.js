@@ -66,8 +66,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const uploadPath = process.env.UPLOAD_PATH || 'uploads/';
 app.use('/uploads', express.static(path.join(__dirname, uploadPath)));
 
-// API routes
+// API routes (support both /api and /api/v1)
 app.use('/api', apiRoutes);
+app.use('/api/v1', apiRoutes);
 
 // Serve uploaded files with proper headers
 app.use('/uploads', (req, res, next) => {
