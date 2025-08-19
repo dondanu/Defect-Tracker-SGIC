@@ -488,6 +488,22 @@ class ProjectController {
       const { projectId } = req.params;
       const { user_id, role_id, start_date, end_date, allocation_percentage, notes } = req.body;
 
+      // Validate related resources to avoid FK errors
+      const project = await Project.findOne({ where: { id: projectId, is_active: true } });
+      if (!project) {
+        return res.status(404).json({ success: false, message: 'Project not found' });
+      }
+
+      const user = await User.findOne({ where: { id: user_id, is_active: true } });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found or inactive' });
+      }
+
+      const role = await Role.findOne({ where: { id: role_id, is_active: true } });
+      if (!role) {
+        return res.status(404).json({ success: false, message: 'Role not found or inactive' });
+      }
+
       // Check if allocation already exists
       const existingAllocation = await ProjectAllocation.findOne({
         where: {
@@ -521,7 +537,7 @@ class ProjectController {
         user_id,
         role_id,
         action: 'ALLOCATED',
-        new_value: `${allocation_percentage}%`,
+        new_value: `${allocation_percentage || 100}%`,
         changed_by: req.user.id,
         notes
       });
