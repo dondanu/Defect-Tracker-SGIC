@@ -192,17 +192,13 @@ class ModuleController {
         });
       }
 
-      // Soft delete module and its submodules
-      await module.update({ is_active: false });
-      
-      await SubModule.update(
-        { is_active: false },
-        { where: { modules_id: id } }
-      );
+      // Hard delete module and its submodules from database
+      await SubModule.destroy({ where: { modules_id: id } });
+      await module.destroy();
 
       res.status(200).json({
         success: true,
-        message: 'Module deleted successfully'
+        message: 'Module and all submodules permanently deleted from database'
       });
     } catch (error) {
       next(error);
