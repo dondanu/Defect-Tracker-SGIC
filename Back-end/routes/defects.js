@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 const defectController = require('../controllers/defectController');
 const { authenticateToken, checkPrivilege, checkProjectAccess } = require('../middlewares/auth');
-const { validateDefect, validateComment, validateId, validateProjectId, handleValidationErrors } = require('../middlewares/validation');
+const { validateDefect, validateComment, validateId, validateProjectId, handleValidationErrors, validateDefectSimpleCreate, validateDefectSimpleUpdate } = require('../middlewares/validation');
 
 // Apply authentication to all routes
 router.use(authenticateToken);
 
 // Defect routes for projects
 router.get('/:projectId/defects', validateProjectId, handleValidationErrors, checkProjectAccess, defectController.getProjectDefects);
-router.post('/:projectId/defects', validateProjectId, validateDefect, handleValidationErrors, checkProjectAccess, defectController.createDefect);
+router.post('/:projectId/defects', validateProjectId, validateDefectSimpleCreate, handleValidationErrors, checkProjectAccess, defectController.createDefect);
 router.get('/:projectId/defects/:id', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, defectController.getDefectById);
-router.put('/:projectId/defects/:id', validateProjectId, validateId, validateDefect, handleValidationErrors, checkProjectAccess, defectController.updateDefect);
+router.put('/:projectId/defects/:id', validateProjectId, validateId, validateDefectSimpleUpdate, handleValidationErrors, checkProjectAccess, defectController.updateDefect);
 router.delete('/:projectId/defects/:id', validateProjectId, validateId, handleValidationErrors, checkProjectAccess, defectController.deleteDefect);
 
 // Defect status and assignment
