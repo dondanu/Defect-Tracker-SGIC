@@ -203,18 +203,44 @@ class DefectController {
     }
   }
 
-  // Create new defect
+  // Create new defect (supports simplified field names from client)
   async createDefect(req, res, next) {
     try {
       const { projectId } = req.params;
 
-      const defectData = {
-        ...req.body,
-        project_id: projectId,
-        assigned_by: req.user.id
+      // Map client fields to DB columns. Keep only allowed fields
+      const mapped = {
+        project_id: Number(projectId),
+        assigned_by: req.body.assignbyId ?? req.user.id,
+        assigned_to: req.body.assigntoId ?? null,
+        defect_status_id: req.body.defectStatusId,
+        type_id: req.body.typeId,
+        priority_id: req.body.priorityId,
+        severity_id: req.body.severityId,
+        modules_id: req.body.modulesId ?? null,
+        sub_module_id: req.body.subModuleId ?? null,
+        release_test_case_id: req.body.releasesId ?? null,
+        description: req.body.description,
+        steps_to_reproduce: req.body.steps ?? null,
+        attachments: req.body.attachment ?? null,
+        // Auto title from description snippet if not supplied
+        title: (req.body.title && String(req.body.title).trim().slice(0, 100)) || String(req.body.description).slice(0, 100)
       };
 
-      const defect = await Defect.create(defectData);
+      // For optional foreign keys, if provided but not found, set to null so it won't fail FK
+      const [moduleExists, subModuleExists, rtcExists, assigneeExists] = await Promise.all([
+        mapped.modules_id ? Module.findByPk(mapped.modules_id) : Promise.resolve(null),
+        mapped.sub_module_id ? SubModule.findByPk(mapped.sub_module_id) : Promise.resolve(null),
+        mapped.release_test_case_id ? ReleaseTestCase.findByPk(mapped.release_test_case_id) : Promise.resolve(null),
+        mapped.assigned_to ? User.findByPk(mapped.assigned_to) : Promise.resolve(null)
+      ]);
+
+      if (mapped.modules_id && !moduleExists) mapped.modules_id = null;
+      if (mapped.sub_module_id && !subModuleExists) mapped.sub_module_id = null;
+      if (mapped.release_test_case_id && !rtcExists) mapped.release_test_case_id = null;
+      if (mapped.assigned_to && !assigneeExists) mapped.assigned_to = null;
+
+      const defect = await Defect.create(mapped);
 
       // Create initial history record
       await DefectHistory.create({
@@ -285,7 +311,7 @@ class DefectController {
     }
   }
 
-  // Update defect
+  // Update defect (supports simplified field names)
   async updateDefect(req, res, next) {
     try {
       const { projectId, id } = req.params;
@@ -312,7 +338,42 @@ class DefectController {
       }
 
       const oldValues = { ...defect.toJSON() };
-      await defect.update(req.body);
+      // Only allow mapped fields from the simplified payload
+      const updatePayload = {};
+      const fieldMap = {
+        description: 'description',
+        steps: 'steps_to_reproduce',
+        defectStatusId: 'defect_status_id',
+        typeId: 'type_id',
+        priorityId: 'priority_id',
+        severityId: 'severity_id',
+        assigntoId: 'assigned_to',
+        assignbyId: 'assigned_by',
+        modulesId: 'modules_id',
+        subModuleId: 'sub_module_id',
+        releasesId: 'release_test_case_id',
+        attachment: 'attachments',
+        title: 'title'
+      };
+      for (const [clientKey, dbKey] of Object.entries(fieldMap)) {
+        if (Object.prototype.hasOwnProperty.call(req.body, clientKey)) {
+          updatePayload[dbKey] = req.body[clientKey];
+        }
+      }
+
+      // For optional foreign keys, if provided but invalid, set to null to avoid FK failures
+      const [moduleExists, subModuleExists, rtcExists, assigneeExists] = await Promise.all([
+        updatePayload.modules_id ? Module.findByPk(updatePayload.modules_id) : Promise.resolve(null),
+        updatePayload.sub_module_id ? SubModule.findByPk(updatePayload.sub_module_id) : Promise.resolve(null),
+        updatePayload.release_test_case_id ? ReleaseTestCase.findByPk(updatePayload.release_test_case_id) : Promise.resolve(null),
+        updatePayload.assigned_to ? User.findByPk(updatePayload.assigned_to) : Promise.resolve(null)
+      ]);
+      if (Object.prototype.hasOwnProperty.call(updatePayload, 'modules_id') && updatePayload.modules_id && !moduleExists) updatePayload.modules_id = null;
+      if (Object.prototype.hasOwnProperty.call(updatePayload, 'sub_module_id') && updatePayload.sub_module_id && !subModuleExists) updatePayload.sub_module_id = null;
+      if (Object.prototype.hasOwnProperty.call(updatePayload, 'release_test_case_id') && updatePayload.release_test_case_id && !rtcExists) updatePayload.release_test_case_id = null;
+      if (Object.prototype.hasOwnProperty.call(updatePayload, 'assigned_to') && updatePayload.assigned_to && !assigneeExists) updatePayload.assigned_to = null;
+
+      await defect.update(updatePayload);
 
       // Create history records for changed fields
       const fieldsToTrack = [
