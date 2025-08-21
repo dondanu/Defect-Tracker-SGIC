@@ -7,6 +7,17 @@ const { validateDefect, validateComment, validateId, validateProjectId, handleVa
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+// Be resilient to text/plain or improperly labeled bodies
+router.use((req, res, next) => {
+  if (typeof req.body === 'string') {
+    const trimmed = req.body.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try { req.body = JSON.parse(trimmed); } catch (_) { /* ignore; validators will handle */ }
+    }
+  }
+  next();
+});
+
 // Defect routes for projects
 router.get('/:projectId/defects', validateProjectId, handleValidationErrors, checkProjectAccess, defectController.getProjectDefects);
 router.post('/:projectId/defects', validateProjectId, validateDefectSimpleCreate, handleValidationErrors, checkProjectAccess, defectController.createDefect);

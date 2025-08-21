@@ -61,6 +61,17 @@ app.use('/api/', limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Accept raw text bodies and try to parse JSON if client sent wrong Content-Type
+app.use(express.text({ type: ['text/plain', 'text/*'], limit: '10mb' }));
+app.use((req, res, next) => {
+  if (typeof req.body === 'string') {
+    const trimmed = req.body.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try { req.body = JSON.parse(trimmed); } catch (_) { /* ignore, let validators handle */ }
+    }
+  }
+  next();
+});
 
 // Serve static files (uploaded files)
 const uploadPath = process.env.UPLOAD_PATH || 'uploads/';
