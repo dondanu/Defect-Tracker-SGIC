@@ -21,6 +21,15 @@ module.exports = (sequelize, DataTypes) => {
         len: [1, 50]
       }
     },
+    username: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [1, 20]
+      }
+    },
     email: {
       type: DataTypes.STRING(100),
       allowNull: false,
@@ -70,6 +79,10 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     underscored: true,
     indexes: [
+      {
+        unique: true,
+        fields: ['username']
+      },
       {
         unique: true,
         fields: ['email']
