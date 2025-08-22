@@ -23,6 +23,23 @@ class AuthService {
     return await bcrypt.compare(plainPassword, hashedPassword);
   }
 
+  // Generate unique username (US0001, US0002, etc.)
+  async generateUsername() {
+    try {
+      const lastUser = await User.findOne({
+        order: [['id', 'DESC']]
+      });
+      
+      const nextId = (lastUser ? lastUser.id : 0) + 1;
+      return `US${String(nextId).padStart(4, '0')}`;
+    } catch (error) {
+      console.error('Username generation error:', error);
+      // Fallback to timestamp-based username
+      const timestamp = Date.now();
+      return `US${timestamp}`;
+    }
+  }
+
   // Register new user
   async register(userData) {
     try {
@@ -38,12 +55,16 @@ class AuthService {
         };
       }
 
+      // Generate unique username
+      const username = await this.generateUsername();
+
       // Hash password
       const hashedPassword = await this.hashPassword(userData.password);
 
-      // Create user
+      // Create user with username
       const user = await User.create({
         ...userData,
+        username: username,
         password: hashedPassword,
         is_active: true
       });
@@ -64,9 +85,20 @@ class AuthService {
         ]
       });
 
+      // Send welcome email with credentials (optional)
+      try {
+        const emailService = require('../services/emailService');
+        await emailService.sendWelcomeEmail(user.email, username, userData.password, user.first_name);
+        console.log(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        console.log('Registration successful but email not sent. User can still login with username and password.');
+        // Don't fail registration if email fails
+      }
+
       return {
         success: true,
-        message: 'User registered successfully',
+        message: 'User registered successfully. Check your email for login credentials.',
         data: {
           user: userResponse,
           token: token
@@ -83,11 +115,11 @@ class AuthService {
   }
 
   // Login user
-  async login(email, password) {
+  async login(username, password, req) {
     try {
-      // Find user by email
+      // Find user by username
       const user = await User.findOne({
-        where: { email: email },
+        where: { username: username },
         include: [
           {
             model: Designation,
@@ -101,7 +133,7 @@ class AuthService {
       if (!user) {
         return {
           success: false,
-          message: 'Invalid email or password'
+          message: 'Invalid username or password'
         };
       }
 
@@ -117,12 +149,33 @@ class AuthService {
       if (!isPasswordValid) {
         return {
           success: false,
-          message: 'Invalid email or password'
+          message: 'Invalid username or password'
         };
       }
 
       // Update last login
       await user.update({ last_login: new Date() });
+
+      // Send login notification email
+      try {
+        const emailService = require('../services/emailService');
+        const loginTime = new Date().toLocaleString();
+        const ipAddress = req?.realIP || req?.ip || req?.connection?.remoteAddress || 'Unknown';
+        const userAgent = req?.headers?.['user-agent'] || 'Unknown';
+        
+        await emailService.sendLoginNotification(
+          user.email, 
+          user.username, 
+          user.first_name, 
+          loginTime, 
+          ipAddress, 
+          userAgent
+        );
+        console.log(`Login notification sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('Login notification email failed:', emailError);
+        // Don't fail login if email fails
+      }
 
       // Generate token
       const token = this.generateToken(user.id);

@@ -23,6 +23,17 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
+// IP address middleware
+app.use((req, res, next) => {
+  // Get real IP address
+  req.realIP = req.ip || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress || 
+               req.connection.socket?.remoteAddress || 
+               'Unknown';
+  next();
+});
+
 // Security middleware
 app.use(helmet({
   crossOriginEmbedderPolicy: false,

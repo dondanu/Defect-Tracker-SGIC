@@ -21,6 +21,7 @@ class EmailService {
         return false;
       }
 
+      // Create transporter with better error handling
       this.transporter = nodemailer.createTransport({
         host: smtpConfig.host,
         port: smtpConfig.port,
@@ -28,11 +29,24 @@ class EmailService {
         auth: {
           user: smtpConfig.username,
           pass: smtpConfig.password
-        }
+        },
+        // Add timeout and retry options
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+        // Retry options
+        pool: false,
+        maxConnections: 1,
+        maxMessages: 3
       });
 
-      // Verify connection
-      await this.transporter.verify();
+      // Verify connection with timeout
+      const verifyPromise = this.transporter.verify();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('SMTP connection timeout')), 10000)
+      );
+      
+      await Promise.race([verifyPromise, timeoutPromise]);
       console.log('SMTP connection verified successfully');
       return true;
     } catch (error) {
@@ -41,13 +55,14 @@ class EmailService {
     }
   }
 
-  // Send email
+  // Send email with fallback options
   async sendEmail(to, subject, html, attachments = []) {
     try {
+      // Try primary SMTP first
       if (!this.transporter) {
         const initialized = await this.initializeTransporter();
         if (!initialized) {
-          throw new Error('Email service not initialized');
+          throw new Error('Primary SMTP failed to initialize');
         }
       }
 
@@ -68,12 +83,129 @@ class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', info.messageId);
+      console.log('Email sent successfully via primary SMTP:', info.messageId);
       return { success: true, messageId: info.messageId };
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      return { success: false, error: error.message };
+    } catch (primaryError) {
+      console.error('Primary SMTP failed:', primaryError.message);
+      
+      // Try fallback email service (Gmail with different settings)
+      try {
+        console.log('Attempting fallback email service...');
+        const fallbackTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.GMAIL_USER || 'your-email@gmail.com',
+            pass: process.env.GMAIL_APP_PASSWORD || 'your-app-password'
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        });
+
+        const mailOptions = {
+          from: process.env.GMAIL_USER || 'your-email@gmail.com',
+          to: Array.isArray(to) ? to.join(', ') : to,
+          subject: subject,
+          html: html,
+          attachments: attachments
+        };
+
+        const info = await fallbackTransporter.sendMail(mailOptions);
+        console.log('Email sent successfully via fallback service:', info.messageId);
+        return { success: true, messageId: info.messageId };
+      } catch (fallbackError) {
+        console.error('Fallback email service also failed:', fallbackError.message);
+        return { success: false, error: `Primary: ${primaryError.message}, Fallback: ${fallbackError.message}` };
+      }
     }
+  }
+
+  // Send welcome email with login credentials
+  async sendWelcomeEmail(email, username, password, firstName) {
+    console.log(`Attempting to send welcome email to: ${email}`);
+    const subject = 'Welcome to Defect Management System - Your Login Credentials';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Welcome to Defect Management System</h1>
+        </div>
+        
+        <div style="padding: 20px; background: #f9f9f9;">
+          <p>Hello <strong>${firstName}</strong>,</p>
+          
+          <p>Your account has been successfully created! Here are your login credentials:</p>
+          
+          <div style="background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #667eea; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #333;">🔐 Login Credentials</h3>
+            <p><strong>Username:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${username}</span></p>
+            <p><strong>Password:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${password}</span></p>
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #856404;">⚠️ Important Security Note</h4>
+            <p style="margin-bottom: 0;">Please change your password after your first login for security purposes.</p>
+          </div>
+          
+          <p><strong>Login URL:</strong> <a href="http://localhost:3000/login" style="color: #667eea;">http://localhost:3000/login</a></p>
+          
+          <p>If you have any questions, please contact the system administrator.</p>
+          
+          <p>Best regards,<br>
+          <strong>Defect Management System Team</strong></p>
+        </div>
+        
+        <div style="background: #f1f1f1; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 12px;">
+          <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+      </div>
+    `;
+
+    return await this.sendEmail(email, subject, html);
+  }
+
+  // Send login notification email
+  async sendLoginNotification(email, username, firstName, loginTime, ipAddress, userAgent) {
+    console.log(`Attempting to send login notification to: ${email}`);
+    const subject = '🔐 Login Notification - Defect Management System';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">🔐 Login Notification</h1>
+        </div>
+        
+        <div style="padding: 20px; background: #f9f9f9;">
+          <p>Hello <strong>${firstName}</strong>,</p>
+          
+          <p>We detected a new login to your account. Here are the details:</p>
+          
+          <div style="background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #28a745; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #333;">📱 Login Details</h3>
+            <p><strong>Username:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${username}</span></p>
+            <p><strong>Login Time:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${loginTime}</span></p>
+            <p><strong>IP Address:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${ipAddress}</span></p>
+            <p><strong>Device/Browser:</strong> <span style="background: #e8f4fd; padding: 5px 10px; border-radius: 3px; font-family: monospace; font-weight: bold;">${userAgent}</span></p>
+          </div>
+          
+          <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; padding: 15px; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #0c5460;">ℹ️ Security Information</h4>
+            <p style="margin-bottom: 0;">If this was you, no action is needed. If you don't recognize this login, please contact the system administrator immediately.</p>
+          </div>
+          
+          <p><strong>System URL:</strong> <a href="http://localhost:3000" style="color: #28a745;">http://localhost:3000</a></p>
+          
+          <p>Thank you for using our system!</p>
+          
+          <p>Best regards,<br>
+          <strong>Defect Management System Team</strong></p>
+        </div>
+        
+        <div style="background: #f1f1f1; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 12px;">
+          <p>This is an automated security notification. Please do not reply to this email.</p>
+        </div>
+      </div>
+    `;
+
+    return await this.sendEmail(email, subject, html);
   }
 
   // Send defect assignment notification
