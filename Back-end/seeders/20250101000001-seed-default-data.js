@@ -142,22 +142,42 @@ module.exports = {
 
     await queryInterface.bulkInsert('privileges', privilegeData);
 
-    // Seed default admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await queryInterface.bulkInsert('users', [
+    // Seed default admin user (only if not exists)
+    const existingAdmin = await queryInterface.sequelize.query(
+      'SELECT id FROM users WHERE email = ?',
       {
-        id: 1,
-        first_name: 'System',
-        last_name: 'Administrator',
-        email: 'admin@defectmanagement.com',
-        password: hashedPassword,
-        phone: '+1234567890',
-        designation_id: 1,
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
+        replacements: ['admin@defectmanagement.com'],
+        type: queryInterface.sequelize.QueryTypes.SELECT
       }
-    ]);
+    );
+
+    if (existingAdmin.length === 0) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await queryInterface.bulkInsert('users', [
+        {
+          id: 1,
+          username: 'US0001',
+          first_name: 'System',
+          last_name: 'Administrator',
+          email: 'admin@defectmanagement.com',
+          password: hashedPassword,
+          phone: '+1234567890',
+          designation_id: 1,
+          is_active: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ]);
+    } else {
+      // Update existing admin user with username if missing
+      await queryInterface.sequelize.query(
+        'UPDATE users SET username = ? WHERE email = ?',
+        {
+          replacements: ['US0001', 'admin@defectmanagement.com'],
+          type: queryInterface.sequelize.QueryTypes.UPDATE
+        }
+      );
+    }
 
     // Seed default project
     await queryInterface.bulkInsert('projects', [
