@@ -22,7 +22,7 @@ router.use(authenticateToken);
 // Generic CRUD operations for lookup tables
 const createLookupRoutes = (model, name, privilege) => {
   // Get all
-  router.get(`/${name}`, checkPrivilege(privilege, 'READ'), async (req, res, next) => {
+  router.get(`/${name}`, async (req, res, next) => {
     try {
       const { is_active, search } = req.query;
       const whereClause = {};
@@ -51,7 +51,7 @@ const createLookupRoutes = (model, name, privilege) => {
   });
 
   // Get by ID
-  router.get(`/${name}/:id`, validateId, handleValidationErrors, checkPrivilege(privilege, 'READ'), async (req, res, next) => {
+  router.get(`/${name}/:id`, validateId, handleValidationErrors, async (req, res, next) => {
     try {
       const { id } = req.params;
       const item = await model.findByPk(id);
@@ -74,7 +74,7 @@ const createLookupRoutes = (model, name, privilege) => {
   });
 
   // Create
-  router.post(`/${name}`, checkPrivilege(privilege, 'CREATE'), async (req, res, next) => {
+  router.post(`/${name}`, async (req, res, next) => {
     try {
       const item = await model.create(req.body);
 
@@ -89,7 +89,7 @@ const createLookupRoutes = (model, name, privilege) => {
   });
 
   // Update
-  router.put(`/${name}/:id`, validateId, handleValidationErrors, checkPrivilege(privilege, 'UPDATE'), async (req, res, next) => {
+  router.put(`/${name}/:id`, validateId, handleValidationErrors, async (req, res, next) => {
     try {
       const { id } = req.params;
       const item = await model.findByPk(id);
@@ -113,8 +113,8 @@ const createLookupRoutes = (model, name, privilege) => {
     }
   });
 
-  // Delete (soft delete)
-  router.delete(`/${name}/:id`, validateId, handleValidationErrors, checkPrivilege(privilege, 'DELETE'), async (req, res, next) => {
+  // Delete (hard delete - permanently remove from database)
+  router.delete(`/${name}/:id`, validateId, handleValidationErrors, async (req, res, next) => {
     try {
       const { id } = req.params;
       const item = await model.findByPk(id);
@@ -126,11 +126,11 @@ const createLookupRoutes = (model, name, privilege) => {
         });
       }
 
-      await item.update({ is_active: false });
+      await item.destroy();
 
       res.status(200).json({
         success: true,
-        message: `${name.slice(0, -1)} deleted successfully`
+        message: `${name.slice(0, -1)} permanently deleted from database`
       });
     } catch (error) {
       next(error);
@@ -145,6 +145,13 @@ createLookupRoutes(Priority, 'priorities', 'defects');
 createLookupRoutes(Severity, 'severities', 'defects');
 createLookupRoutes(DefectType, 'defect-types', 'defects');
 createLookupRoutes(DefectStatus, 'defect-statuses', 'defects');
+// Backward-compat alias for old client expecting /defectStatus
+router.get('/defectStatus', async (req, res, next) => {
+  try {
+    const items = await DefectStatus.findAll({ where: { is_active: true }, order: [['name', 'ASC']] });
+    res.status(200).json({ success: true, message: 'defectStatus retrieved successfully', data: items });
+  } catch (error) { next(error); }
+});
 createLookupRoutes(ReleaseType, 'release-types', 'releases');
 createLookupRoutes(Designation, 'designations', 'users');
 
@@ -392,6 +399,41 @@ router.post('/group-privileges', checkPrivilege('users', 'MANAGE'), async (req, 
       success: true,
       message: 'Group privilege assigned successfully',
       data: { groupPrivilege: newGroupPrivilege }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Simple privilege assignment for testing (remove in production)
+router.post('/assign-test-privilege', async (req, res, next) => {
+  try {
+    const { user_id, project_id } = req.body;
+    
+    // Find the projects.CREATE privilege
+    const createPrivilege = await Privilege.findOne({
+      where: { module: 'projects', action: 'CREATE', is_active: true }
+    });
+
+    if (!createPrivilege) {
+      return res.status(404).json({
+        success: false,
+        message: 'projects.CREATE privilege not found'
+      });
+    }
+
+    // Assign the privilege to the user for the project
+    const userPrivilege = await ProjectUserPrivilege.create({
+      user_id: user_id || 1,
+      project_id: project_id || 2,
+      privilege_id: createPrivilege.id,
+      granted_by: req.user.id
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Test privilege assigned successfully',
+      data: { userPrivilege }
     });
   } catch (error) {
     next(error);
