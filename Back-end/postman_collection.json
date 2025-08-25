@@ -1,0 +1,846 @@
+{
+  "info": {
+    "name": "Defect Management System API",
+    "description": "Complete API collection for Defect Management System with JWT authentication and all CRUD operations",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "project_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "defect_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('jwt_token', response.data.token);",
+                  "        pm.collectionVariables.set('user_id', response.data.user.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\",\n    \"designation_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user account"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/register"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n    \"success\": true,\n    \"message\": \"User registered successfully\",\n    \"data\": {\n        \"user\": {\n            \"id\": 2,\n            \"first_name\": \"Test\",\n            \"last_name\": \"User\",\n            \"email\": \"test@example.com\"\n        },\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.token) {",
+                  "        pm.collectionVariables.set('jwt_token', response.data.token);",
+                  "        pm.collectionVariables.set('user_id', response.data.user.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@defectmanagement.com\",\n    \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with email and password"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n    \"success\": true,\n    \"message\": \"Login successful\",\n    \"data\": {\n        \"user\": {\n            \"id\": 1,\n            \"first_name\": \"System\",\n            \"last_name\": \"Administrator\",\n            \"email\": \"admin@defectmanagement.com\"\n        },\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"current_password\": \"admin123\",\n    \"new_password\": \"newpassword123\",\n    \"confirm_password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Change current user's password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users & Roles",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": "", "disabled": true},
+                {"key": "designation_id", "value": "", "disabled": true},
+                {"key": "is_active", "value": "true", "disabled": true}
+              ]
+            },
+            "description": "Get all users with pagination and filters"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"New\",\n    \"last_name\": \"User\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\",\n    \"designation_id\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Updated\",\n    \"last_name\": \"User\",\n    \"phone\": \"+0987654321\",\n    \"designation_id\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Senior Developer\",\n    \"description\": \"Senior level developer role\",\n    \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": ["{{base_url}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Get All Privileges",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/privileges",
+              "host": ["{{base_url}}"],
+              "path": ["privileges"]
+            }
+          }
+        },
+        {
+          "name": "Assign User Privilege",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"privilege_id\": 1,\n    \"project_id\": null,\n    \"expires_at\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/user-privileges",
+              "host": ["{{base_url}}"],
+              "path": ["user-privileges"]
+            }
+          }
+        },
+        {
+          "name": "Get Email Preferences",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/email-preferences",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}", "email-preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update Email Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"preferences\": [\n        {\n            \"email_type\": \"DEFECT_ASSIGNED\",\n            \"is_enabled\": true\n        },\n        {\n            \"email_type\": \"DEFECT_STATUS_CHANGED\",\n            \"is_enabled\": false\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/email-preferences",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}", "email-preferences"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Get All Projects",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["projects"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": "", "disabled": true},
+                {"key": "status", "value": "", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Project by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"E-Commerce Platform\",\n    \"description\": \"Online shopping platform development\",\n    \"start_date\": \"2025-01-01\",\n    \"end_date\": \"2025-12-31\",\n    \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects",
+              "host": ["{{base_url}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Project Name\",\n    \"description\": \"Updated project description\",\n    \"status\": \"IN_PROGRESS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Project Modules",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/modules",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "modules"]
+            }
+          }
+        },
+        {
+          "name": "Create Module",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Payment Gateway\",\n    \"description\": \"Payment processing module\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/modules",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "modules"]
+            }
+          }
+        },
+        {
+          "name": "Create Submodule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Credit Card Processing\",\n    \"description\": \"Credit card payment processing functionality\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/modules/1/submodules",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "modules", "1", "submodules"]
+            }
+          }
+        },
+        {
+          "name": "Get Project Allocations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/allocations",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "allocations"]
+            }
+          }
+        },
+        {
+          "name": "Allocate User to Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"role_id\": 4,\n    \"start_date\": \"2025-01-15\",\n    \"allocation_percentage\": 75,\n    \"notes\": \"Allocated as tester for module testing\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/allocations",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "allocations"]
+            }
+          }
+        },
+        {
+          "name": "Get Allocation History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/allocation-history",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "allocation-history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Defects",
+      "item": [
+        {
+          "name": "Get Project Defects",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "search", "value": "", "disabled": true},
+                {"key": "status_id", "value": "", "disabled": true},
+                {"key": "priority_id", "value": "", "disabled": true},
+                {"key": "severity_id", "value": "", "disabled": true}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Defect",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.defect) {",
+                  "        pm.collectionVariables.set('defect_id', response.data.defect.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Login button not working\",\n    \"description\": \"When user clicks login button, nothing happens. No error message shown.\",\n    \"steps_to_reproduce\": \"1. Go to login page\\n2. Enter valid credentials\\n3. Click login button\\n4. Observe no response\",\n    \"expected_result\": \"User should be logged in and redirected to dashboard\",\n    \"actual_result\": \"Nothing happens, button appears unresponsive\",\n    \"defect_status_id\": 1,\n    \"type_id\": 1,\n    \"priority_id\": 2,\n    \"severity_id\": 2,\n    \"modules_id\": 1,\n    \"environment\": \"Chrome 120, Windows 11\",\n    \"browser\": \"Chrome 120\",\n    \"os\": \"Windows 11\",\n    \"assigned_to\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects"]
+            }
+          }
+        },
+        {
+          "name": "Get Defect by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Defect Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"defect_status_id\": 3,\n    \"resolution_notes\": \"Issue reproduced and assigned to developer for fixing\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Assign Defect",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"assigned_to\": 1,\n    \"notes\": \"Reassigning to senior developer for urgent fix\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}", "assign"]
+            }
+          }
+        },
+        {
+          "name": "Get Defect History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/history",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}", "history"]
+            }
+          }
+        },
+        {
+          "name": "Add Comment to Defect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"comment\": \"I've reproduced this issue. The login API call is failing with 500 error. Investigating further.\",\n    \"attachments\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Get Defect Comments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["projects", "{{project_id}}", "defects", "{{defect_id}}", "comments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lookups",
+      "item": [
+        {
+          "name": "Get Priorities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/priorities",
+              "host": ["{{base_url}}"],
+              "path": ["priorities"]
+            }
+          }
+        },
+        {
+          "name": "Create Priority",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Urgent\",\n    \"description\": \"Urgent priority - fix immediately\",\n    \"level\": 0,\n    \"color_code\": \"#ff0000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/priorities",
+              "host": ["{{base_url}}"],
+              "path": ["priorities"]
+            }
+          }
+        },
+        {
+          "name": "Get Severities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/severities",
+              "host": ["{{base_url}}"],
+              "path": ["severities"]
+            }
+          }
+        },
+        {
+          "name": "Get Defect Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/defect-types",
+              "host": ["{{base_url}}"],
+              "path": ["defect-types"]
+            }
+          }
+        },
+        {
+          "name": "Get Defect Statuses",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/defect-statuses",
+              "host": ["{{base_url}}"],
+              "path": ["defect-statuses"]
+            }
+          }
+        },
+        {
+          "name": "Get Release Types",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/release-types",
+              "host": ["{{base_url}}"],
+              "path": ["release-types"]
+            }
+          }
+        },
+        {
+          "name": "Get Designations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/designations",
+              "host": ["{{base_url}}"],
+              "path": ["designations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SMTP Config",
+      "item": [
+        {
+          "name": "Get SMTP Configs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/config/smtp",
+              "host": ["{{base_url}}"],
+              "path": ["config", "smtp"]
+            }
+          }
+        },
+        {
+          "name": "Create SMTP Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"host\": \"smtp.gmail.com\",\n    \"port\": 587,\n    \"secure\": false,\n    \"username\": \"your-email@gmail.com\",\n    \"password\": \"your-app-password\",\n    \"from_email\": \"your-email@gmail.com\",\n    \"from_name\": \"Defect Management System\",\n    \"is_default\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/config/smtp",
+              "host": ["{{base_url}}"],
+              "path": ["config", "smtp"]
+            }
+          }
+        },
+        {
+          "name": "Test SMTP Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"test_email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/config/smtp/1/test",
+              "host": ["{{base_url}}"],
+              "path": ["config", "smtp", "1", "test"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}

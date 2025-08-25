@@ -31,7 +31,6 @@ const validateUser = [
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('password')
-    .optional()
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long'),
   body('phone')
@@ -46,10 +45,10 @@ const validateUser = [
 
 // Login validation rules
 const validateLogin = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+  body('username')
+    .trim()
+    .notEmpty()
+    .withMessage('Username is required'),
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -128,6 +127,52 @@ const validateDefect = [
     .optional()
     .isInt({ min: 1 })
     .withMessage('Sub-module ID must be a positive integer')
+];
+
+// Lightweight client defect validation (for payload with simplified field names)
+// Required: description, defectStatusId, typeId, priorityId, severityId
+const validateDefectSimpleCreate = [
+  body('description')
+    .trim()
+    .notEmpty()
+    .withMessage('Description is required'),
+  body('defectStatusId')
+    .isInt({ min: 1 })
+    .withMessage('defectStatusId must be a positive integer'),
+  body('typeId')
+    .isInt({ min: 1 })
+    .withMessage('typeId must be a positive integer'),
+  body('priorityId')
+    .isInt({ min: 1 })
+    .withMessage('priorityId must be a positive integer'),
+  body('severityId')
+    .isInt({ min: 1 })
+    .withMessage('severityId must be a positive integer'),
+  // Optional numeric IDs
+  body('assigntoId').optional().isInt({ min: 1 }).withMessage('assigntoId must be a positive integer'),
+  body('assignbyId').optional().isInt({ min: 1 }).withMessage('assignbyId must be a positive integer'),
+  body('modulesId').optional().isInt({ min: 1 }).withMessage('modulesId must be a positive integer'),
+  body('subModuleId').optional().isInt({ min: 1 }).withMessage('subModuleId must be a positive integer'),
+  body('releasesId').optional().isInt({ min: 1 }).withMessage('releasesId must be a positive integer'),
+  // Optional text fields
+  body('steps').optional().trim(),
+  body('attachment').optional()
+];
+
+// Update validation: all fields optional, same naming as above
+const validateDefectSimpleUpdate = [
+  body('description').optional().trim().isLength({ min: 1 }).withMessage('Description must not be empty'),
+  body('defectStatusId').optional().isInt({ min: 1 }).withMessage('defectStatusId must be a positive integer'),
+  body('typeId').optional().isInt({ min: 1 }).withMessage('typeId must be a positive integer'),
+  body('priorityId').optional().isInt({ min: 1 }).withMessage('priorityId must be a positive integer'),
+  body('severityId').optional().isInt({ min: 1 }).withMessage('severityId must be a positive integer'),
+  body('assigntoId').optional().isInt({ min: 1 }).withMessage('assigntoId must be a positive integer'),
+  body('assignbyId').optional().isInt({ min: 1 }).withMessage('assignbyId must be a positive integer'),
+  body('modulesId').optional().isInt({ min: 1 }).withMessage('modulesId must be a positive integer'),
+  body('subModuleId').optional().isInt({ min: 1 }).withMessage('subModuleId must be a positive integer'),
+  body('releasesId').optional().isInt({ min: 1 }).withMessage('releasesId must be a positive integer'),
+  body('steps').optional().trim(),
+  body('attachment').optional()
 ];
 
 // Test case validation rules
@@ -256,6 +301,8 @@ module.exports = {
   validateProject,
   validateModule,
   validateDefect,
+  validateDefectSimpleCreate,
+  validateDefectSimpleUpdate,
   validateTestCase,
   validateRelease,
   validateComment,

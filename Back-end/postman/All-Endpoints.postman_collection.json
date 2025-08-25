@@ -1,0 +1,289 @@
+{
+  "info": {
+    "name": "Defect Tracker - Full API (All Endpoints)",
+    "description": "Comprehensive Postman collection covering all API endpoints under /api (also valid for /api/v1). Use Login to set {{jwt_token}}, then run protected requests.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{jwt_token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/api", "type": "string" },
+    { "key": "jwt_token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "1", "type": "string" },
+    { "key": "project_id", "value": "1", "type": "string" },
+    { "key": "module_id", "value": "1", "type": "string" },
+    { "key": "sub_module_id", "value": "1", "type": "string" },
+    { "key": "defect_id", "value": "1", "type": "string" },
+    { "key": "allocation_id", "value": "1", "type": "string" },
+    { "key": "smtp_id", "value": "1", "type": "string" },
+    { "key": "role_id", "value": "1", "type": "string" },
+    { "key": "privilege_id", "value": "1", "type": "string" },
+    { "key": "group_privilege_id", "value": "1", "type": "string" },
+    { "key": "project_privilege_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Root & Health",
+      "item": [
+        { "name": "API Info", "request": { "method": "GET", "url": { "raw": "{{base_url}}/", "host": ["{{base_url}}"], "path": [""] } } },
+        { "name": "Health", "request": { "method": "GET", "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] } } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+1234567890\",\n  \"designation_id\": 1\n}"},
+            "url": {"raw":"{{base_url}}/auth/register","host":["{{base_url}}"],"path":["auth","register"]}
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            { "listen": "test", "script": { "exec": [
+              "if (pm.response.code === 200) {",
+              "  const data = pm.response.json().data;",
+              "  if (data && data.token) { pm.collectionVariables.set('jwt_token', data.token); pm.collectionVariables.set('user_id', data.user.id); }",
+              "}"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\n  \"email\": \"admin@defectmanagement.com\",\n  \"password\": \"admin123\"\n}"},
+            "url": {"raw":"{{base_url}}/auth/login","host":["{{base_url}}"],"path":["auth","login"]}
+          }
+        },
+        {
+          "name": "Request Password Reset",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\n  \"email\": \"user@example.com\"\n}"},
+            "url": {"raw":"{{base_url}}/auth/request-password-reset","host":["{{base_url}}"],"path":["auth","request-password-reset"]}
+          }
+        },
+        { "name": "Profile", "request": { "method": "GET", "url": { "raw": "{{base_url}}/auth/profile", "host": ["{{base_url}}"], "path": ["auth","profile"] } } },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "body": {"mode":"raw","raw":"{\n  \"current_password\": \"admin123\",\n  \"new_password\": \"newpassword123\",\n  \"confirm_password\": \"newpassword123\"\n}"},
+            "url": {"raw":"{{base_url}}/auth/change-password","host":["{{base_url}}"],"path":["auth","change-password"]}
+          }
+        },
+        { "name": "Logout", "request": { "method": "POST", "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth","logout"] } } },
+        { "name": "Verify Token", "request": { "method": "GET", "url": { "raw": "{{base_url}}/auth/verify-token", "host": ["{{base_url}}"], "path": ["auth","verify-token"] } } },
+        { "name": "Refresh Token", "request": { "method": "POST", "url": { "raw": "{{base_url}}/auth/refresh-token", "host": ["{{base_url}}"], "path": ["auth","refresh-token"] } } }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "Get All Users", "request": { "method": "GET", "url": { "raw": "{{base_url}}/users?page=1&limit=10", "host": ["{{base_url}}"], "path": ["users"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}] } } },
+        { "name": "Get User by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users","{{user_id}}"] } } },
+        { "name": "Create User", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+1234567890\",\n  \"designation_id\": 4\n}"}, "url": { "raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"] } } },
+        { "name": "Update User", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"User\",\n  \"phone\": \"+0987654321\",\n  \"designation_id\": 3\n}"}, "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users","{{user_id}}"] } } },
+        { "name": "Delete User", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users","{{user_id}}"] } } },
+        { "name": "Change User Status", "request": { "method": "PATCH", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"is_active\": false\n}"}, "url": { "raw": "{{base_url}}/users/{{user_id}}/status", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","status"] } } },
+        { "name": "Reset User Password", "request": { "method": "PATCH", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"new_password\": \"Temp1234!\"\n}"}, "url": { "raw": "{{base_url}}/users/{{user_id}}/password", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","password"] } } },
+        { "name": "Get User Privileges", "request": { "method": "GET", "url": { "raw": "{{base_url}}/users/{{user_id}}/privileges", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","privileges"] } } },
+        { "name": "Get User Projects", "request": { "method": "GET", "url": { "raw": "{{base_url}}/users/{{user_id}}/projects", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","projects"] } } },
+        { "name": "Get Email Preferences", "request": { "method": "GET", "url": { "raw": "{{base_url}}/users/{{user_id}}/email-preferences", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","email-preferences"] } } },
+        { "name": "Update Email Preferences", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"preferences\": [\n    { \"email_type\": \"DEFECT_ASSIGNED\", \"is_enabled\": true },\n    { \"email_type\": \"DEFECT_STATUS_CHANGED\", \"is_enabled\": false }\n  ]\n}"}, "url": { "raw": "{{base_url}}/users/{{user_id}}/email-preferences", "host": ["{{base_url}}"], "path": ["users","{{user_id}}","email-preferences"] } } }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        { "name": "Get All Projects", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects?page=1&limit=10", "host": ["{{base_url}}"], "path": ["projects"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}] } } },
+        { "name": "Create Project", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"E-Commerce Platform\",\n  \"description\": \"Online shopping platform development\",\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-12-31\",\n  \"status\": \"ACTIVE\"\n}"}, "url": { "raw": "{{base_url}}/projects", "host": ["{{base_url}}"], "path": ["projects"] } } },
+        { "name": "Get Project by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}"] } } },
+        { "name": "Update Project", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Updated Project Name\",\n  \"description\": \"Updated project description\",\n  \"status\": \"IN_PROGRESS\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}"] } } },
+        { "name": "Delete Project", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/projects/{{project_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}"] } } },
+        {
+          "name": "Modules",
+          "item": [
+            { "name": "Get Modules", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules"] } } },
+            { "name": "Create Module", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Payment Gateway\",\n  \"description\": \"Payment processing module\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules"] } } },
+            { "name": "Get Module by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}"] } } },
+            { "name": "Update Module", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Payments\",\n  \"description\": \"Updated desc\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}"] } } },
+            { "name": "Delete Module", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}"] } } }
+          ]
+        },
+        {
+          "name": "Submodules",
+          "item": [
+            { "name": "Get Submodules", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}/submodules", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}","submodules"] } } },
+            { "name": "Create Submodule", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Credit Card Processing\",\n  \"description\": \"Credit card payment processing functionality\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}/submodules", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}","submodules"] } } },
+            { "name": "Update Submodule", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Card Processing\",\n  \"description\": \"Updated\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}/submodules/{{sub_module_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}","submodules","{{sub_module_id}}"] } } },
+            { "name": "Delete Submodule", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/projects/{{project_id}}/modules/{{module_id}}/submodules/{{sub_module_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","modules","{{module_id}}","submodules","{{sub_module_id}}"] } } }
+          ]
+        },
+        {
+          "name": "Allocations",
+          "item": [
+            { "name": "Get Allocations", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/allocations", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","allocations"] } } },
+            { "name": "Create Allocation", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"user_id\": {{user_id}},\n  \"role_id\": 4,\n  \"start_date\": \"2025-01-15\",\n  \"allocation_percentage\": 75,\n  \"notes\": \"Allocated as tester for module testing\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/allocations", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","allocations"] } } },
+            { "name": "Update Allocation", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"allocation_percentage\": 50,\n  \"notes\": \"Updated\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/allocations/{{allocation_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","allocations","{{allocation_id}}"] } } },
+            { "name": "Delete Allocation", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/projects/{{project_id}}/allocations/{{allocation_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","allocations","{{allocation_id}}"] } } },
+            { "name": "Allocation History", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/allocation-history", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","allocation-history"] } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Defects",
+      "item": [
+        { "name": "Get Project Defects", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects?page=1&limit=10", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}] } } },
+        { "name": "Create Defect", "event": [{ "listen": "test", "script": { "exec": [
+          "if (pm.response.code === 201) {",
+          "  const d = pm.response.json().data; if (d && d.defect && d.defect.id) pm.collectionVariables.set('defect_id', d.defect.id);",
+          "}"
+        ] } }], "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"title\": \"Login button not working\",\n  \"description\": \"When clicking login, nothing happens.\",\n  \"steps_to_reproduce\": \"1. Go to login\\n2. Enter creds\\n3. Click Login\",\n  \"expected_result\": \"Should log in\",\n  \"actual_result\": \"No action\",\n  \"defect_status_id\": 1,\n  \"type_id\": 1,\n  \"priority_id\": 2,\n  \"severity_id\": 2,\n  \"modules_id\": {{module_id}},\n  \"environment\": \"Chrome 120, Windows 11\",\n  \"assigned_to\": {{user_id}}\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects"] } } },
+        { "name": "Get Defect by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}"] } } },
+        { "name": "Update Defect", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"title\": \"Login CTA not responsive\",\n  \"description\": \"Updated details\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}"] } } },
+        { "name": "Delete Defect", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}"] } } },
+        { "name": "Update Status", "request": { "method": "PATCH", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"defect_status_id\": 3,\n  \"resolution_notes\": \"In progress\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/status", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}","status"] } } },
+        { "name": "Assign Defect", "request": { "method": "PATCH", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"assigned_to\": {{user_id}},\n  \"notes\": \"Reassigning\"\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/assign", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}","assign"] } } },
+        { "name": "Get History", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/history", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}","history"] } } },
+        { "name": "Get Comments", "request": { "method": "GET", "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/comments", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}","comments"] } } },
+        { "name": "Add Comment", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"comment\": \"Investigating\",\n  \"attachments\": []\n}"}, "url": { "raw": "{{base_url}}/projects/{{project_id}}/defects/{{defect_id}}/comments", "host": ["{{base_url}}"], "path": ["projects","{{project_id}}","defects","{{defect_id}}","comments"] } } }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        { "name": "Defect Severity Summary", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/defect_severity_summary/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","defect_severity_summary","{{project_id}}"] } } },
+        { "name": "DSI", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/dsi/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","dsi","{{project_id}}"] } } },
+        { "name": "Defect Types", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/defect-type/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","defect-type","{{project_id}}"] } } },
+        { "name": "Defect Remark Ratio", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/defect-remark-ratio", "host": ["{{base_url}}"], "path": ["dashboard","defect-remark-ratio"] } } },
+        { "name": "Module Summary", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/module", "host": ["{{base_url}}"], "path": ["dashboard","module"] } } },
+        { "name": "Reopen Count Summary", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/reopen-count_summary/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","reopen-count_summary","{{project_id}}"] } } },
+        { "name": "Defect Density", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/defect-density/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","defect-density","{{project_id}}"] } } },
+        { "name": "Project Card Color", "request": { "method": "GET", "url": { "raw": "{{base_url}}/dashboard/project-card-color/{{project_id}}", "host": ["{{base_url}}"], "path": ["dashboard","project-card-color","{{project_id}}"] } } }
+      ]
+    },
+    {
+      "name": "Releases",
+      "item": [
+        { "name": "Get Project Releases", "request": { "method": "GET", "url": { "raw": "{{base_url}}/releases/project/{{project_id}}", "host": ["{{base_url}}"], "path": ["releases","project","{{project_id}}"] } } }
+      ]
+    },
+    {
+      "name": "Lookups (CRUD)",
+      "item": [
+        {
+          "name": "Roles",
+          "item": [
+            { "name": "Get Roles", "request": { "method": "GET", "url": { "raw": "{{base_url}}/roles", "host": ["{{base_url}}"], "path": ["roles"] } } },
+            { "name": "Get Role by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["roles","{{role_id}}"] } } },
+            { "name": "Create Role", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Senior Developer\",\n  \"description\": \"Senior role\",\n  \"is_active\": true\n}"}, "url": { "raw": "{{base_url}}/roles", "host": ["{{base_url}}"], "path": ["roles"] } } },
+            { "name": "Update Role", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"description\": \"Updated\"\n}"}, "url": { "raw": "{{base_url}}/roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["roles","{{role_id}}"] } } },
+            { "name": "Delete Role", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/roles/{{role_id}}", "host": ["{{base_url}}"], "path": ["roles","{{role_id}}"] } } }
+          ]
+        },
+        {
+          "name": "Privileges",
+          "item": [
+            { "name": "Get Privileges", "request": { "method": "GET", "url": { "raw": "{{base_url}}/privileges", "host": ["{{base_url}}"], "path": ["privileges"] } } },
+            { "name": "Get Privilege by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/privileges/{{privilege_id}}", "host": ["{{base_url}}"], "path": ["privileges","{{privilege_id}}"] } } },
+            { "name": "Create Privilege", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"users.READ\",\n  \"module\": \"users\",\n  \"action\": \"READ\",\n  \"is_active\": true\n}"}, "url": { "raw": "{{base_url}}/privileges", "host": ["{{base_url}}"], "path": ["privileges"] } } },
+            { "name": "Update Privilege", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"action\": \"UPDATE\"\n}"}, "url": { "raw": "{{base_url}}/privileges/{{privilege_id}}", "host": ["{{base_url}}"], "path": ["privileges","{{privilege_id}}"] } } },
+            { "name": "Delete Privilege", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/privileges/{{privilege_id}}", "host": ["{{base_url}}"], "path": ["privileges","{{privilege_id}}"] } } }
+          ]
+        },
+        {
+          "name": "Priorities",
+          "item": [
+            { "name": "Get Priorities", "request": { "method": "GET", "url": { "raw": "{{base_url}}/priorities", "host": ["{{base_url}}"], "path": ["priorities"] } } },
+            { "name": "Get Priority by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/priorities/1", "host": ["{{base_url}}"], "path": ["priorities","1"] } } },
+            { "name": "Create Priority", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Urgent\",\n  \"description\": \"Fix immediately\",\n  \"level\": 0,\n  \"color_code\": \"#ff0000\"\n}"}, "url": { "raw": "{{base_url}}/priorities", "host": ["{{base_url}}"], "path": ["priorities"] } } },
+            { "name": "Update Priority", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"description\": \"Updated\"\n}"}, "url": { "raw": "{{base_url}}/priorities/1", "host": ["{{base_url}}"], "path": ["priorities","1"] } } },
+            { "name": "Delete Priority", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/priorities/1", "host": ["{{base_url}}"], "path": ["priorities","1"] } } }
+          ]
+        },
+        {
+          "name": "Severities",
+          "item": [
+            { "name": "Get Severities", "request": { "method": "GET", "url": { "raw": "{{base_url}}/severities", "host": ["{{base_url}}"], "path": ["severities"] } } },
+            { "name": "Create Severity", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Critical\",\n  \"level\": 1\n}"}, "url": { "raw": "{{base_url}}/severities", "host": ["{{base_url}}"], "path": ["severities"] } } }
+          ]
+        },
+        {
+          "name": "Defect Types",
+          "item": [
+            { "name": "Get Defect Types", "request": { "method": "GET", "url": { "raw": "{{base_url}}/defect-types", "host": ["{{base_url}}"], "path": ["defect-types"] } } },
+            { "name": "Create Defect Type", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"name\": \"Functional\"\n}"}, "url": { "raw": "{{base_url}}/defect-types", "host": ["{{base_url}}"], "path": ["defect-types"] } } }
+          ]
+        },
+        {
+          "name": "Defect Statuses",
+          "item": [
+            { "name": "Get Defect Statuses", "request": { "method": "GET", "url": { "raw": "{{base_url}}/defect-statuses", "host": ["{{base_url}}"], "path": ["defect-statuses"] } } },
+            { "name": "Alias: /defectStatus (GET)", "request": { "method": "GET", "url": { "raw": "{{base_url}}/defectStatus", "host": ["{{base_url}}"], "path": ["defectStatus"] } } }
+          ]
+        },
+        {
+          "name": "Release Types",
+          "item": [
+            { "name": "Get Release Types", "request": { "method": "GET", "url": { "raw": "{{base_url}}/release-types", "host": ["{{base_url}}"], "path": ["release-types"] } } }
+          ]
+        },
+        {
+          "name": "Designations",
+          "item": [
+            { "name": "Get Designations", "request": { "method": "GET", "url": { "raw": "{{base_url}}/designations", "host": ["{{base_url}}"], "path": ["designations"] } } }
+          ]
+        },
+        {
+          "name": "User Privileges",
+          "item": [
+            { "name": "Get User Privileges", "request": { "method": "GET", "url": { "raw": "{{base_url}}/user-privileges?user_id={{user_id}}&project_id={{project_id}}", "host": ["{{base_url}}"], "path": ["user-privileges"], "query": [{"key":"user_id","value":"{{user_id}}"},{"key":"project_id","value":"{{project_id}}"}] } } },
+            { "name": "Assign User Privilege", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"user_id\": {{user_id}},\n  \"privilege_id\": {{privilege_id}},\n  \"project_id\": {{project_id}},\n  \"expires_at\": null\n}"}, "url": { "raw": "{{base_url}}/user-privileges", "host": ["{{base_url}}"], "path": ["user-privileges"] } } },
+            { "name": "Remove User Privilege", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/user-privileges/{{group_privilege_id}}", "host": ["{{base_url}}"], "path": ["user-privileges","{{group_privilege_id}}"] } } }
+          ]
+        },
+        {
+          "name": "Project User Privileges",
+          "item": [
+            { "name": "Get Project User Privileges", "request": { "method": "GET", "url": { "raw": "{{base_url}}/project-user-privileges?user_id={{user_id}}&project_id={{project_id}}", "host": ["{{base_url}}"], "path": ["project-user-privileges"], "query": [{"key":"user_id","value":"{{user_id}}"},{"key":"project_id","value":"{{project_id}}"}] } } },
+            { "name": "Assign Project User Privilege", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"user_id\": {{user_id}},\n  \"project_id\": {{project_id}},\n  \"privilege_id\": {{privilege_id}}\n}"}, "url": { "raw": "{{base_url}}/project-user-privileges", "host": ["{{base_url}}"], "path": ["project-user-privileges"] } } }
+          ]
+        },
+        {
+          "name": "Group Privileges",
+          "item": [
+            { "name": "Get Group Privileges", "request": { "method": "GET", "url": { "raw": "{{base_url}}/group-privileges", "host": ["{{base_url}}"], "path": ["group-privileges"] } } },
+            { "name": "Assign Group Privilege", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"role_id\": {{role_id}},\n  \"privilege_id\": {{privilege_id}}\n}"}, "url": { "raw": "{{base_url}}/group-privileges", "host": ["{{base_url}}"], "path": ["group-privileges"] } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Config (SMTP)",
+      "item": [
+        { "name": "Get SMTP Configs", "request": { "method": "GET", "url": { "raw": "{{base_url}}/config/smtp", "host": ["{{base_url}}"], "path": ["config","smtp"] } } },
+        { "name": "Get SMTP by ID", "request": { "method": "GET", "url": { "raw": "{{base_url}}/config/smtp/{{smtp_id}}", "host": ["{{base_url}}"], "path": ["config","smtp","{{smtp_id}}"] } } },
+        { "name": "Create SMTP Config", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"host\": \"smtp.gmail.com\",\n  \"port\": 587,\n  \"secure\": false,\n  \"username\": \"your-email@gmail.com\",\n  \"password\": \"your-app-password\",\n  \"from_email\": \"your-email@gmail.com\",\n  \"from_name\": \"Defect Management System\",\n  \"is_default\": true\n}"}, "url": { "raw": "{{base_url}}/config/smtp", "host": ["{{base_url}}"], "path": ["config","smtp"] } } },
+        { "name": "Update SMTP Config", "request": { "method": "PUT", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"from_name\": \"DMS\"\n}"}, "url": { "raw": "{{base_url}}/config/smtp/{{smtp_id}}", "host": ["{{base_url}}"], "path": ["config","smtp","{{smtp_id}}"] } } },
+        { "name": "Delete SMTP Config", "request": { "method": "DELETE", "url": { "raw": "{{base_url}}/config/smtp/{{smtp_id}}", "host": ["{{base_url}}"], "path": ["config","smtp","{{smtp_id}}"] } } },
+        { "name": "Test SMTP Config", "request": { "method": "POST", "header":[{"key":"Content-Type","value":"application/json"}], "body": {"mode":"raw","raw":"{\n  \"test_email\": \"test@example.com\"\n}"}, "url": { "raw": "{{base_url}}/config/smtp/{{smtp_id}}/test", "host": ["{{base_url}}"], "path": ["config","smtp","{{smtp_id}}","test"] } } },
+        { "name": "Set Default SMTP", "request": { "method": "PATCH", "url": { "raw": "{{base_url}}/config/smtp/{{smtp_id}}/default", "host": ["{{base_url}}"], "path": ["config","smtp","{{smtp_id}}","default"] } } }
+      ]
+    }
+  ]
+}
+
+
+

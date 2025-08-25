@@ -1,0 +1,11 @@
+{ "info": { "name": "Defect Tracker - Auth", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" }, "variable": [ {"key":"base_url","value":"http://localhost:3000"}, {"key":"token","value":""} ], "item": [
+{"name":"POST /api/auth/login","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{base_url}}/api/auth/login","body":{"mode":"raw","raw":"{\n  \"email\": \"user@example.com\",\n  \"password\": \"password\"\n}"}}},
+{"name":"POST /api/auth/register","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{base_url}}/api/auth/register","body":{"mode":"raw","raw":"{ }"}}},
+{"name":"POST /api/auth/request-password-reset","request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{base_url}}/api/auth/request-password-reset","body":{"mode":"raw","raw":"{\n  \"email\": \"user@example.com\"\n}"}}},
+{"name":"GET /api/auth/profile","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{base_url}}/api/auth/profile"}},
+{"name":"POST /api/auth/change-password","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{base_url}}/api/auth/change-password","body":{"mode":"raw","raw":"{\n  \"current_password\": \"\",\n  \"new_password\": \"\"\n}"}}},
+{"name":"POST /api/auth/logout","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{base_url}}/api/auth/logout"}},
+{"name":"GET /api/auth/verify-token","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{base_url}}/api/auth/verify-token"}},
+{"name":"POST /api/auth/refresh-token","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{base_url}}/api/auth/refresh-token"}}
+] }
+
