@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for the API
-const BASE_URL = 'http://34.56.162.48:8087/api/v1';
+const BASE_URL = 'http://74.235.80.66:8087/api/v1';
 
 // Login request interface
 export interface LoginRequest {
