@@ -67,7 +67,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
     // Fetch all projects for the project selection tabs
     const fetchAllProjects = async () => {
       try {
-        const projectsUrl = 'http://34.56.162.48:8087/api/v1/projects';
+        const projectsUrl = 'http://74.235.80.66:8087/api/v1/projects';
         console.log('API CALL:', projectsUrl);
         const token = await AsyncStorage.getItem('authToken');
         const response = await fetch(projectsUrl, {
@@ -78,7 +78,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
         // Fetch project card colors for all projects
         (data.data || []).forEach(async (project: any) => {
-          const colorUrl = `http://34.56.162.48:8087/api/v1/dashboard/project-card-color/${project.id}`;
+          const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
           console.log('API CALL:', colorUrl);
           try {
             const colorRes = await fetch(colorUrl, {
@@ -113,15 +113,15 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
       try {
         // Log all API URLs before calling
         const apiUrls = [
-          `http://34.56.162.48:8087/api/v1/defect-statistics/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/defects/project/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/defect_severity_summary/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/defect-remark-ratio?projectId=${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/dsi/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/defect-type/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/reopen-count_summary/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/defect-density/${selectedProjectTab}`,
-          `http://34.56.162.48:8087/api/v1/dashboard/module?projectId=${selectedProjectTab}`
+          `http://74.235.80.66:8087/api/v1/defect-statistics/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/defects/project/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/defect_severity_summary/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/defect-remark-ratio?projectId=${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/dsi/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/defect-type/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/reopen-count_summary/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/defect-density/${selectedProjectTab}`,
+          `http://74.235.80.66:8087/api/v1/dashboard/module?projectId=${selectedProjectTab}`
         ];
         apiUrls.forEach(url => console.log('API CALL:', url));
 

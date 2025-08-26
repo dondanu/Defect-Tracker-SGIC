@@ -35,6 +35,7 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Determine screen size categories
   const isVerySmallScreen = screenHeight < 600;
@@ -43,7 +44,7 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
 
   useEffect(() => {
     checkBiometricSupport();
-    // Don't load saved credentials - always start with empty fields
+    loadSavedCredentials();
   }, []);
 
   const checkBiometricSupport = async () => {
@@ -59,14 +60,21 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
 
   const loadSavedCredentials = async () => {
     try {
+      const savedRememberMe = await AsyncStorage.getItem('rememberMe');
       const savedUsername = await AsyncStorage.getItem('savedUsername');
       const savedPassword = await AsyncStorage.getItem('savedPassword');
 
-      if (savedUsername) {
-        setUsername(savedUsername);
-      }
-      if (savedPassword) {
-        setPassword(savedPassword);
+      const shouldPrefill = savedRememberMe === 'true' && !!savedUsername && !!savedPassword;
+
+      setRememberMe(savedRememberMe === 'true');
+
+      if (shouldPrefill) {
+        setUsername(savedUsername || '');
+        setPassword(savedPassword || '');
+      } else {
+        // ensure fields start empty when remember me is off
+        setUsername('');
+        setPassword('');
       }
 
       // Log for debugging on physical device
@@ -90,10 +98,27 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       await AsyncStorage.removeItem('savedUsername');
       await AsyncStorage.removeItem('savedPassword');
+      await AsyncStorage.setItem('rememberMe', 'false');
+      setRememberMe(false);
       clearInputFields();
       Alert.alert('Success', 'Saved credentials cleared!');
     } catch (error) {
       console.log('Error clearing saved credentials:', error);
+    }
+  };
+
+  const handleUsernameFocus = async () => {
+    try {
+      if (!rememberMe) return;
+      const savedUsername = await AsyncStorage.getItem('savedUsername');
+      const savedPassword = await AsyncStorage.getItem('savedPassword');
+      if (savedUsername && savedPassword) {
+        // Only prefill if fields are empty to mimic browser autofill behavior
+        if (!username) setUsername(savedUsername);
+        if (!password) setPassword(savedPassword);
+      }
+    } catch (error) {
+      console.log('Autofill on focus error:', error);
     }
   };
 
@@ -119,10 +144,18 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
           console.log('LOGIN DEBUG: Unexpected token type:', typeof response.data, response.data);
         }
 
-        // Save credentials for biometric login
-        await AsyncStorage.setItem('savedUsername', username);
-        await AsyncStorage.setItem('savedPassword', password);
-        console.log('LOGIN DEBUG: saved credentials for biometric login');
+        // Save or clear credentials based on Remember Me
+        if (rememberMe) {
+          await AsyncStorage.setItem('savedUsername', username);
+          await AsyncStorage.setItem('savedPassword', password);
+          await AsyncStorage.setItem('rememberMe', 'true');
+          console.log('LOGIN DEBUG: saved credentials (remember me ON)');
+        } else {
+          await AsyncStorage.removeItem('savedUsername');
+          await AsyncStorage.removeItem('savedPassword');
+          await AsyncStorage.setItem('rememberMe', 'false');
+          console.log('LOGIN DEBUG: credentials not saved (remember me OFF)');
+        }
 
         // Call the onLogin callback
         onLogin(username, password);
@@ -263,6 +296,11 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="username"
+          autoComplete="username"
+          importantForAutofill="yes"
+          onFocus={handleUsernameFocus}
         />
       </View>
 
@@ -276,6 +314,11 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="password"
+          autoComplete="password"
+          importantForAutofill="yes"
         />
         <TouchableOpacity
           style={styles.eyeIcon}
@@ -306,6 +349,19 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
             <Text style={styles.eyeIconText}>
               {showConfirmPassword ? "👁️" : "👁️"}
             </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Forgot Password Link (Login only) */}
+      {!isSignUp && (
+        <View style={styles.rememberMeContainer}>
+          <TouchableOpacity
+            style={styles.rememberMeButton}
+            onPress={() => setRememberMe(!rememberMe)}
+          >
+            <Text style={styles.rememberMeBox}>{rememberMe ? '☑' : '☐'}</Text>
+            <Text style={styles.rememberMeText}>Remember me</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -513,6 +569,25 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginBottom: 12,
     marginTop: -2,
+  },
+  rememberMeContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  rememberMeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rememberMeBox: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#1a237e',
+  },
+  rememberMeText: {
+    color: '#1a237e',
+    fontSize: 13,
+    fontWeight: '500',
   },
   forgotPasswordText: {
     color: '#1a237e',

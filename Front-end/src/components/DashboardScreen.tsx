@@ -93,11 +93,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       };
 
       // FAST: Only load essential data first
-      console.log('API CALL:', 'http://34.56.162.48:8087/api/v1/projects');
-      console.log('API CALL:', 'http://34.56.162.48:8087/api/v1/defectStatus');
+      console.log('API CALL:', 'http://74.235.80.66:8087/api/v1/projects');
+      console.log('API CALL:', 'http://74.235.80.66:8087/api/v1/defectStatus');
       const [projectsResponse, defectsResponse] = await Promise.all([
-        fetch('http://34.56.162.48:8087/api/v1/projects', fetchOptions),
-        fetch('http://34.56.162.48:8087/api/v1/defectStatus', fetchOptions)
+        fetch('http://74.235.80.66:8087/api/v1/projects', fetchOptions),
+        fetch('http://74.235.80.66:8087/api/v1/defectStatus', fetchOptions)
       ]);
       if (!projectsResponse.ok || !defectsResponse.ok) {
         const projectsText = await projectsResponse.text();
@@ -191,7 +191,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     // Load priority colors first
     const priorityPromises = priorityProjects.map(async (project) => {
       try {
-        const colorUrl = `http://34.56.162.48:8087/api/v1/dashboard/project-card-color/${project.id}`;
+        const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
         console.log('API CALL:', colorUrl);
         const colorResponse = await fetch(colorUrl, fetchOptions);
         if (!colorResponse.ok) throw new Error('Color fetch failed');
@@ -214,7 +214,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setTimeout(async () => {
           const remainingPromises = remainingProjects.map(async (project) => {
             try {
-              const colorUrl = `http://34.56.162.48:8087/api/v1/dashboard/project-card-color/${project.id}`;
+              const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
               console.log('API CALL:', colorUrl);
               const colorResponse = await fetch(colorUrl, fetchOptions);
               if (!colorResponse.ok) throw new Error('Color fetch failed');
