@@ -40,6 +40,89 @@ class AuthService {
     }
   }
 
+  // Generate random password
+  generateRandomPassword() {
+    const length = 12;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    
+    // Ensure at least one character from each category
+    password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]; // lowercase
+    password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]; // uppercase
+    password += '0123456789'[Math.floor(Math.random() * 10)]; // number
+    password += '!@#$%^&*'[Math.floor(Math.random() * 8)]; // special character
+    
+    // Fill the rest randomly
+    for (let i = 4; i < length; i++) {
+      password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Shuffle the password
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  }
+
+  // Reset password by email (generate new password and update database)
+  async resetPasswordByEmail(email) {
+    try {
+      console.log(`🔐 Attempting password reset for email: ${email}`);
+      
+      // Find user by email
+      const user = await User.findOne({
+        where: { email: email }
+      });
+
+      if (!user) {
+        console.log(`❌ User not found for email: ${email}`);
+        return {
+          success: false,
+          message: 'User with this email not found'
+        };
+      }
+
+      if (!user.is_active) {
+        console.log(`❌ User account is deactivated for email: ${email}`);
+        return {
+          success: false,
+          message: 'User account is deactivated'
+        };
+      }
+
+      console.log(`✅ User found: ${user.username} (ID: ${user.id})`);
+
+      // Generate new random password
+      const newPassword = this.generateRandomPassword();
+      console.log(`🔑 Generated new password: ${newPassword}`);
+      
+      // Hash the new password
+      const hashedPassword = await this.hashPassword(newPassword);
+      console.log(`🔒 Password hashed successfully`);
+
+      // Update user's password in database
+      await user.update({ password: hashedPassword });
+      console.log(`💾 Password updated in database for user: ${user.username}`);
+
+      return {
+        success: true,
+        message: 'Password reset successfully',
+        data: {
+          userId: user.id,
+          username: user.username,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          newPassword: newPassword // Return plain password to send via email
+        }
+      };
+    } catch (error) {
+      console.error('❌ Reset password by email error:', error);
+      return {
+        success: false,
+        message: 'Failed to reset password',
+        error: error.message
+      };
+    }
+  }
+
   // Register new user
   async register(userData) {
     try {
