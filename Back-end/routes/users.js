@@ -22,6 +22,7 @@ router.delete('/:id', validateId, handleValidationErrors, checkPrivilege('users'
 // User status management
 router.patch('/:id/status', validateId, handleValidationErrors, checkPrivilege('users', 'MANAGE'), userController.changeUserStatus);
 router.patch('/:id/password', validateId, validatePasswordChange, handleValidationErrors, checkPrivilege('users', 'MANAGE'), userController.resetUserPassword);
+router.patch('/:id/password-email', validateId, handleValidationErrors, checkPrivilege('users', 'MANAGE'), userController.resetUserPasswordByEmail);
 
 // User privileges and projects
 router.get('/:id/privileges', validateId, handleValidationErrors, checkPrivilege('users', 'READ'), userController.getUserPrivileges);
