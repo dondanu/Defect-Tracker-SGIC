@@ -54,6 +54,14 @@ const validateLogin = [
     .withMessage('Password is required')
 ];
 
+// Password reset validation rules
+const validatePasswordReset = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address')
+];
+
 // Project validation rules
 const validateProject = [
   body('name')
@@ -298,6 +306,7 @@ module.exports = {
   handleValidationErrors,
   validateUser,
   validateLogin,
+  validatePasswordReset,
   validateProject,
   validateModule,
   validateDefect,

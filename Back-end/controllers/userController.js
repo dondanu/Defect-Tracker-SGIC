@@ -244,6 +244,60 @@ class UserController {
     }
   }
 
+  // Reset user password by email (admin function - generates random password)
+  async resetUserPasswordByEmail(req, res, next) {
+    try {
+      const { id } = req.params;
+      
+      // Get user details first
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Reset password and get new password
+      const resetResult = await authService.resetPasswordByEmail(user.email);
+      
+      if (!resetResult.success) {
+        return res.status(400).json(resetResult);
+      }
+
+      // Send email with new password
+      const emailService = require('../services/emailService');
+      const emailResult = await emailService.sendPasswordResetEmail(
+        user.email,
+        resetResult.data.username,
+        resetResult.data.newPassword,
+        resetResult.data.first_name
+      );
+
+      if (emailResult.success) {
+        res.status(200).json({
+          success: true,
+          message: `Password reset successfully for ${user.email}. New password has been sent to their email.`,
+          data: {
+            userId: user.id,
+            email: user.email,
+            message: 'Password reset and email sent successfully'
+          }
+        });
+      } else {
+        // Password was reset but email failed
+        console.error('Password reset email failed:', emailResult);
+        res.status(500).json({
+          success: false,
+          message: 'Password was reset but failed to send email. Please contact administrator.',
+          error: 'Email delivery failed'
+        });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Get user privileges
   async getUserPrivileges(req, res, next) {
     try {
