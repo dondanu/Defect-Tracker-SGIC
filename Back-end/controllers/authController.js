@@ -109,38 +109,52 @@ class AuthController {
     }
   }
 
-  // Send password reset email (placeholder implementation)
+  // Send password reset email with new password
   async requestPasswordReset(req, res, next) {
     try {
       const { email } = req.body;
+      console.log(`📧 Password reset request received for email: ${email}`);
       
-      // In a real implementation, you would:
-      // 1. Generate a password reset token
-      // 2. Store it in database with expiration
-      // 3. Send email with reset link
+      // First, reset the password in database and get new password
+      const resetResult = await authService.resetPasswordByEmail(email);
       
-      const result = await emailService.sendGeneralNotification(
+      if (!resetResult.success) {
+        console.log(`❌ Password reset failed: ${resetResult.message}`);
+        return res.status(400).json(resetResult);
+      }
+
+      console.log(`✅ Password reset successful for user: ${resetResult.data.username}`);
+
+      // Send email with new password using dedicated method
+      const emailResult = await emailService.sendPasswordResetEmail(
         email,
-        'Password Reset Request',
-        `
-          <p>You have requested a password reset for your account.</p>
-          <p>Please contact your system administrator to reset your password.</p>
-          <p>If you did not request this reset, please ignore this email.</p>
-        `
+        resetResult.data.username,
+        resetResult.data.newPassword,
+        resetResult.data.first_name
       );
       
-      if (result.success) {
+      if (emailResult.success) {
+        console.log(`📨 Password reset email sent successfully to: ${email}`);
         res.status(200).json({
           success: true,
-          message: 'Password reset instructions have been sent to your email'
+          message: 'Password reset successfully. New password has been sent to your email.',
+          data: {
+            email: email,
+            message: 'Check your email for the new password'
+          }
         });
       } else {
+        // Password was reset in database but email failed
+        // We should probably revert the password change or notify admin
+        console.error('❌ Password reset email failed:', emailResult);
         res.status(500).json({
           success: false,
-          message: 'Failed to send password reset email'
+          message: 'Password was reset but failed to send email. Please contact administrator.',
+          error: 'Email delivery failed'
         });
       }
     } catch (error) {
+      console.error('❌ Password reset controller error:', error);
       next(error);
     }
   }
