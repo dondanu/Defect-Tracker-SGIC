@@ -343,6 +343,65 @@ class EmailService {
     return await this.sendEmail(emails, subject, html);
   }
 
+  // Send password reset email with new credentials
+  async sendPasswordResetEmail(userEmail, username, newPassword, firstName) {
+    const subject = 'Password Reset - New Login Credentials';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2c3e50; margin: 0;">🔐 Password Reset Successful</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <p style="font-size: 16px; color: #2c3e50; margin-bottom: 20px;">
+            Hello <strong>${firstName || 'User'}</strong>,
+          </p>
+          
+          <p style="font-size: 16px; color: #2c3e50; margin-bottom: 25px;">
+            Your password has been reset successfully. Here are your new login credentials:
+          </p>
+          
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #3498db; margin: 25px 0;">
+            <div style="margin-bottom: 15px;">
+              <span style="font-weight: bold; color: #2c3e50; display: inline-block; width: 100px;">Username:</span>
+              <span style="font-family: 'Courier New', monospace; background-color: #e9ecef; padding: 8px 12px; border-radius: 4px; font-weight: bold;">${username}</span>
+            </div>
+            <div>
+              <span style="font-weight: bold; color: #2c3e50; display: inline-block; width: 100px;">Password:</span>
+              <span style="font-family: 'Courier New', monospace; background-color: #e9ecef; padding: 8px 12px; border-radius: 4px; font-weight: bold; color: #e74c3c;">${newPassword}</span>
+            </div>
+          </div>
+          
+          <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 25px 0;">
+            <p style="margin: 0; color: #856404; font-weight: bold;">
+              ⚠️ Important Security Notice:
+            </p>
+            <p style="margin: 10px 0 0 0; color: #856404;">
+              Please change your password immediately after logging in for security purposes.
+            </p>
+          </div>
+          
+          <p style="font-size: 16px; color: #2c3e50; margin-bottom: 20px;">
+            If you did not request this password reset, please contact your system administrator immediately.
+          </p>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="#" style="background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Login to System
+            </a>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #7f8c8d; font-size: 14px;">
+          <p style="margin: 0;">Thank you for using our system!</p>
+          <p style="margin: 5px 0 0 0;"><em>Defect Management System</em></p>
+        </div>
+      </div>
+    `;
+
+    return await this.sendEmail(userEmail, subject, html);
+  }
+
   // Test SMTP connection
   async testConnection(smtpConfig) {
     try {
