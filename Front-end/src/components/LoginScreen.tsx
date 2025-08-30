@@ -16,8 +16,8 @@ import { SafeAreaView } from 'react-native';
 import TouchID from 'react-native-touch-id';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Logo from './Logo';
 import { loginUser } from '../api/auth';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -40,7 +40,6 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
   // Determine screen size categories
   const isVerySmallScreen = screenHeight < 600;
   const isSmallScreen = screenHeight < 700;
-  const logoSize = isVerySmallScreen ? 80 : isSmallScreen ? 100 : 120;
 
   useEffect(() => {
     checkBiometricSupport();
@@ -323,10 +322,10 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
         <TouchableOpacity
           style={styles.eyeIcon}
           onPress={() => setShowPassword(!showPassword)}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
         >
-          <Text style={styles.eyeIconText}>
-            {showPassword ? "👁️" : "👁️"}
-          </Text>
+          <Icon name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#666" />
         </TouchableOpacity>
       </View>
 
@@ -345,17 +344,17 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
           <TouchableOpacity
             style={styles.eyeIcon}
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            accessibilityRole="button"
+            accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
           >
-            <Text style={styles.eyeIconText}>
-              {showConfirmPassword ? "👁️" : "👁️"}
-            </Text>
+            <Icon name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#666" />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Forgot Password Link (Login only) */}
+      {/* Remember Me and Forgot Password in same line */}
       {!isSignUp && (
-        <View style={styles.rememberMeContainer}>
+        <View style={styles.optionsRow}>
           <TouchableOpacity
             style={styles.rememberMeButton}
             onPress={() => setRememberMe(!rememberMe)}
@@ -363,18 +362,15 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
             <Text style={styles.rememberMeBox}>{rememberMe ? '☑' : '☐'}</Text>
             <Text style={styles.rememberMeText}>Remember me</Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={handleForgotPassword}
+            onLongPress={clearSavedCredentials}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
         </View>
-      )}
-
-      {/* Forgot Password Link (Login only) */}
-      {!isSignUp && (
-        <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={handleForgotPassword}
-          onLongPress={clearSavedCredentials}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
       )}
 
       {/* Main Action Button */}
@@ -442,28 +438,14 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
         colors={['#1a237e', '#3949ab', '#5c6bc0']}
         style={styles.gradient}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidingView}
-        >
-          <View style={styles.mainContainer}>
-            {/* Logo Section - Flexible */}
-            <View style={[styles.logoContainer, isSmallScreen && styles.logoContainerSmall]}>
-              <Logo
-                size={logoSize}
-                showText={!isVerySmallScreen}
-                showSubtitle={false}
-              />
-            </View>
-
-            {/* Form Container */}
-            <View style={[styles.formContainer, isSmallScreen && styles.formContainerSmall]}>
-              <View style={styles.formContent}>
-                {renderFormContent()}
-              </View>
+        <View style={styles.mainContainer}>
+          {/* Form Container */}
+          <View style={[styles.formContainer, isSmallScreen && styles.formContainerSmall]}>
+            <View style={styles.formContent}>
+              {renderFormContent()}
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -476,30 +458,20 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
+
   mainContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    flex: 0.25,
     justifyContent: 'center',
-    minHeight: 10,
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  logoContainerSmall: {
-    flex: 0.12,
-    minHeight: 45,
-  },
+
   formContainer: {
-    flex: 0.7,
+    width: '100%',
+    maxWidth: 400,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 25,
-    paddingVertical: 0,
+    paddingVertical: 30,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -509,7 +481,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
-    justifyContent: 'center',
   },
   formContainerSmall: {
     flex: 0.75,
@@ -518,7 +489,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   formContent: {
-    flex: 1,
     justifyContent: 'center',
     paddingVertical: 0,
     marginVertical: 0,
@@ -549,6 +519,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     paddingHorizontal: 12,
     height: 48,
+    position: 'relative',
   },
   inputIcon: {
     marginRight: 12,
@@ -560,18 +531,20 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   eyeIcon: {
+    position: 'absolute',
+    right: 10,
+    top: 12,
     padding: 5,
-  },
-  eyeIconText: {
-    fontSize: 16,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 12,
     marginTop: -2,
   },
-  rememberMeContainer: {
-    alignSelf: 'flex-start',
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 8,
     marginTop: 4,
   },
@@ -588,11 +561,13 @@ const styles = StyleSheet.create({
     color: '#1a237e',
     fontSize: 13,
     fontWeight: '500',
+    lineHeight: 20,
   },
   forgotPasswordText: {
     color: '#1a237e',
     fontSize: 13,
     fontWeight: '500',
+    lineHeight: 20,
   },
   primaryButton: {
     borderRadius: 10,
