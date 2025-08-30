@@ -11,6 +11,7 @@ import { getReopenCountSummary } from '../api/Defectreopen';
 import { getDefectTypeByProjectId } from '../api/defecttype';
 import { getDefectsByModule } from '../api/defectbymodule';
 import { getDefectDensity } from '../api/defectdensity';
+import { getReleasesByProjectId, getTimeToFindDefects, getTimeToFixDefects } from '../api/release';
 import GaugeChart from './GaugeChart';
 import DynamicPieChart from './DynamicPieChart';
 import SeverityPieChart from './SeverityPieChart';
@@ -57,11 +58,74 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
   const [selectedSeverityChart, setSelectedSeverityChart] = useState<'high' | 'medium' | 'low' | null>(null);
   const [projectRiskLevel, setProjectRiskLevel] = useState<string>('Medium Risk');
   const [projectCardData, setProjectCardData] = useState<{ [projectId: number]: any }>({});
+  
+  // Release-related state
+  const [releases, setReleases] = useState<any[]>([]);
+  const [selectedRelease, setSelectedRelease] = useState<string>('all');
+  const [timeToFindData, setTimeToFindData] = useState<any>(null);
+  const [timeToFixData, setTimeToFixData] = useState<any>(null);
+  const [loadingReleaseData, setLoadingReleaseData] = useState(false);
+  const [showReleaseDropdown, setShowReleaseDropdown] = useState(false);
 
   // Keep this useEffect to maintain hook order (but without console logs)
   useEffect(() => {
     // Silently monitor severity summary changes
   }, [severitySummary]);
+
+  // Function to fetch release data
+  const fetchReleaseData = async (projectId: number, releaseId?: string) => {
+    try {
+      setLoadingReleaseData(true);
+      const token = await AsyncStorage.getItem('authToken');
+      
+      // Fetch releases for the project
+      const releasesResponse = await getReleasesByProjectId(projectId, token || undefined);
+      setReleases(releasesResponse.data || []);
+      
+      // If a specific release is selected, fetch its time data
+      if (releaseId && releaseId !== 'all') {
+        try {
+          // Find the selected release to get its name and ID
+          const selectedReleaseData = releasesResponse.data?.releases?.find((r: any) => r.id.toString() === releaseId);
+          
+          if (selectedReleaseData) {
+            const releaseName = selectedReleaseData.releaseName || selectedReleaseData.name;
+            const releaseIdNum = selectedReleaseData.id;
+            
+            console.log('DEBUG: Fetching time data for release:', releaseName, 'ID:', releaseIdNum);
+            
+            // Fetch time to find defects (uses projectId and releaseName)
+            const findData = await getTimeToFindDefects(projectId, releaseName, token || undefined);
+            setTimeToFindData(findData);
+            
+            // Fetch time to fix defects (uses projectId and releaseId)
+            const fixData = await getTimeToFixDefects(projectId, releaseIdNum, token || undefined);
+            setTimeToFixData(fixData);
+          } else {
+            console.log('DEBUG: Selected release not found in releases data');
+            setTimeToFindData(null);
+            setTimeToFixData(null);
+          }
+        } catch (error) {
+          console.error('Error fetching time data for release:', error);
+          setTimeToFindData(null);
+          setTimeToFixData(null);
+        }
+      } else {
+        // For "All Releases", show empty charts
+        setTimeToFindData(null);
+        setTimeToFixData(null);
+      }
+    } catch (error) {
+      console.error('Error fetching release data:', error);
+      // Set empty data on error to prevent UI issues
+      setReleases([]);
+      setTimeToFindData(null);
+      setTimeToFixData(null);
+    } finally {
+      setLoadingReleaseData(false);
+    }
+  };
 
   useEffect(() => {
     // Fetch all projects for the project selection tabs
@@ -114,7 +178,6 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
         // Log all API URLs before calling
         const apiUrls = [
           `http://74.235.80.66:8087/api/v1/defect-statistics/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/defects/project/${selectedProjectTab}`,
           `http://74.235.80.66:8087/api/v1/dashboard/defect_severity_summary/${selectedProjectTab}`,
           `http://74.235.80.66:8087/api/v1/dashboard/defect-remark-ratio?projectId=${selectedProjectTab}`,
           `http://74.235.80.66:8087/api/v1/dashboard/dsi/${selectedProjectTab}`,
@@ -128,7 +191,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
         const token = await AsyncStorage.getItem('authToken');
 
         // Helper to fetch and log status/errors
-        const fetchWithStatus = async (url, label) => {
+        const fetchWithStatus = async (url: string, label: string) => {
           try {
             const res = await fetch(url, {
               headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -150,7 +213,6 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
         // Fetch all APIs in parallel with status/error logging
         const [
           statsData,
-          defectsData,
           severityData,
           remarkRatioData,
           dsiData,
@@ -160,19 +222,17 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           defectsByModuleDataRes
         ] = await Promise.all([
           fetchWithStatus(apiUrls[0], 'defect-statistics'),
-          fetchWithStatus(apiUrls[1], 'defects/project'),
-          fetchWithStatus(apiUrls[2], 'defect_severity_summary'),
-          fetchWithStatus(apiUrls[3], 'defect-remark-ratio'),
-          fetchWithStatus(apiUrls[4], 'dsi'),
-          fetchWithStatus(apiUrls[5], 'defect-type'),
-          fetchWithStatus(apiUrls[6], 'reopen-count_summary'),
-          fetchWithStatus(apiUrls[7], 'defect-density'),
-          fetchWithStatus(apiUrls[8], 'module')
+          fetchWithStatus(apiUrls[1], 'defect_severity_summary'),
+          fetchWithStatus(apiUrls[2], 'defect-remark-ratio'),
+          fetchWithStatus(apiUrls[3], 'dsi'),
+          fetchWithStatus(apiUrls[4], 'defect-type'),
+          fetchWithStatus(apiUrls[5], 'reopen-count_summary'),
+          fetchWithStatus(apiUrls[6], 'defect-density'),
+          fetchWithStatus(apiUrls[7], 'module')
         ]);
 
         // Debug: Log all API responses
         console.log('API RESPONSE: defect-statistics', statsData);
-        console.log('API RESPONSE: defects/project', defectsData);
         console.log('API RESPONSE: defect_severity_summary', severityData);
         console.log('API RESPONSE: defect-remark-ratio', remarkRatioData);
         console.log('API RESPONSE: dsi', dsiData);
@@ -186,21 +246,18 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setDefectStats((prev) => ({ ...prev, ...statsData.data }));
         }
 
-        // 2. Defects data (not used in UI, but keep for future)
-        if (defectsData && defectsData.data) {
-          setDefects(defectsData.data);
-        }
+
 
         // 3. Defect severity summary
         if (severityData && severityData.data && severityData.data.defectSummary) {
           console.log('DEBUG: defectSummary raw array:', severityData.data.defectSummary);
           const transformedData = { high: {}, medium: {}, low: {}, totalDefects: severityData.data.totalDefects };
-          severityData.data.defectSummary.forEach((item, idx) => {
+          severityData.data.defectSummary.forEach((item: any, idx: number) => {
             console.log('DEBUG: defectSummary item', idx, item);
             const level = item.severity?.toLowerCase();
             if (level === 'high' || level === 'medium' || level === 'low') {
               const obj = { total: item.totalDefects || 0, statuses: item.statuses || {} };
-              transformedData[level] = obj;
+              (transformedData as any)[level] = obj;
             }
           });
           setSeveritySummary(transformedData);
@@ -282,6 +339,13 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setDefectsByModuleError(true);
         }
 
+        // 10. Fetch release data
+        try {
+          await fetchReleaseData(selectedProjectTab, selectedRelease);
+        } catch (error) {
+          console.error('Error in fetchProjectData when calling fetchReleaseData:', error);
+        }
+
       } catch (error) {
         // Silently handle error
       } finally {
@@ -291,6 +355,17 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
     fetchProjectData();
   }, [selectedProjectTab]);
+
+  // Effect to handle release selection changes
+  useEffect(() => {
+    if (selectedProjectTab) {
+      try {
+        fetchReleaseData(selectedProjectTab, selectedRelease);
+      } catch (error) {
+        console.error('Error in release selection useEffect:', error);
+      }
+    }
+  }, [selectedRelease]);
 
   // Helper functions for dynamic project info
   const getProjectRiskFromCardAPI = (projectId: number): 'high' | 'medium' | 'low' => {
@@ -868,68 +943,133 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
         {/* Additional Charts Section */}
         <View style={styles.additionalChartsSection}>
+          {/* Release Filter */}
+          <View style={styles.releaseFilterContainer}>
+            <Text style={styles.releaseFilterLabel}>Release:</Text>
+            <View style={styles.releaseDropdownContainer}>
+              <TouchableOpacity
+                style={styles.releaseDropdown}
+                onPress={() => setShowReleaseDropdown(!showReleaseDropdown)}
+              >
+                <Text style={styles.releaseDropdownText}>
+                  {selectedRelease === 'all' ? 'All Releases' : 
+                   releases.find(r => r.id.toString() === selectedRelease)?.releaseName || 'All Releases'}
+                </Text>
+                <Text style={styles.releaseDropdownArrow}>▼</Text>
+              </TouchableOpacity>
+              
+              {/* Dropdown Options */}
+              {showReleaseDropdown && (
+                <View style={styles.releaseDropdownOptions}>
+                  <TouchableOpacity
+                    style={styles.releaseOption}
+                    onPress={() => {
+                      setSelectedRelease('all');
+                      setShowReleaseDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.releaseOptionText}>All Releases</Text>
+                  </TouchableOpacity>
+                  {releases.map((release) => (
+                    <TouchableOpacity
+                      key={release.id}
+                      style={styles.releaseOption}
+                      onPress={() => {
+                        setSelectedRelease(release.id.toString());
+                        setShowReleaseDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.releaseOptionText}>{release.releaseName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+          
           {/* Time Charts Row */}
           <View style={styles.timeChartsRow}>
             {/* Time to Find Defects */}
             <View style={styles.timeChartCard}>
               <Text style={styles.timeChartTitle}>Time to Find Defects</Text>
-              <View style={styles.lineChartContainer}>
-                <View style={styles.yAxisLabels}>
-                  <Text style={styles.axisLabel}>4</Text>
-                  <Text style={styles.axisLabel}>3</Text>
-                  <Text style={styles.axisLabel}>2</Text>
-                  <Text style={styles.axisLabel}>1</Text>
-                  <Text style={styles.axisLabel}>0</Text>
+              {loadingReleaseData ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading...</Text>
                 </View>
-                <View style={styles.lineChartArea}>
-                  <View style={styles.lineChartPlaceholder}>
-                    <Text style={styles.lineChartText}>📈 Line Chart</Text>
+              ) : timeToFindData && timeToFindData.data ? (
+                <View style={styles.lineChartContainer}>
+                  <View style={styles.yAxisLabels}>
+                    <Text style={styles.axisLabel}>14</Text>
+                    <Text style={styles.axisLabel}>12</Text>
+                    <Text style={styles.axisLabel}>10</Text>
+                    <Text style={styles.axisLabel}>8</Text>
+                    <Text style={styles.axisLabel}>6</Text>
+                    <Text style={styles.axisLabel}>4</Text>
+                    <Text style={styles.axisLabel}>2</Text>
+                    <Text style={styles.axisLabel}>0</Text>
                   </View>
-                  <View style={styles.xAxisLabels}>
-                    <Text style={styles.xAxisLabel}>Day 1</Text>
-                    <Text style={styles.xAxisLabel}>Day 2</Text>
-                    <Text style={styles.xAxisLabel}>Day 3</Text>
-                    <Text style={styles.xAxisLabel}>Day 4</Text>
-                    <Text style={styles.xAxisLabel}>Day 5</Text>
-                    <Text style={styles.xAxisLabel}>Day 6</Text>
-                    <Text style={styles.xAxisLabel}>Day 7</Text>
-                    <Text style={styles.xAxisLabel}>Day 8</Text>
-                    <Text style={styles.xAxisLabel}>Day 10</Text>
+                  <View style={styles.lineChartArea}>
+                    {/* Render actual chart data here */}
+                    <View style={styles.lineChartPlaceholder}>
+                      <Text style={styles.lineChartText}>📈 Line Chart</Text>
+                    </View>
+                    <View style={styles.xAxisLabels}>
+                      <Text style={styles.xAxisLabel}>Day 1</Text>
+                      <Text style={styles.xAxisLabel}>Day 2</Text>
+                      <Text style={styles.xAxisLabel}>Day 3</Text>
+                      <Text style={styles.xAxisLabel}>Day 4</Text>
+                      <Text style={styles.xAxisLabel}>Day 5</Text>
+                      <Text style={styles.xAxisLabel}>Day 6</Text>
+                      <Text style={styles.xAxisLabel}>Day 7</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              <Text style={styles.chartAxisTitle}>Time (Day)</Text>
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>No time to find data available for selected release</Text>
+                </View>
+              )}
+              <Text style={styles.chartAxisTitle}>Defects Count</Text>
             </View>
 
             {/* Time to Fix Defects */}
             <View style={styles.timeChartCard}>
               <Text style={styles.timeChartTitle}>Time to Fix Defects</Text>
-              <View style={styles.lineChartContainer}>
-                <View style={styles.yAxisLabels}>
-                  <Text style={styles.axisLabel}>4</Text>
-                  <Text style={styles.axisLabel}>3</Text>
-                  <Text style={styles.axisLabel}>2</Text>
-                  <Text style={styles.axisLabel}>1</Text>
-                  <Text style={styles.axisLabel}>0</Text>
+              {loadingReleaseData ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Loading...</Text>
                 </View>
-                <View style={styles.lineChartArea}>
-                  <View style={styles.lineChartPlaceholder}>
-                    <Text style={styles.lineChartText}>📈 Line Chart</Text>
+              ) : timeToFixData && timeToFixData.data ? (
+                <View style={styles.lineChartContainer}>
+                  <View style={styles.yAxisLabels}>
+                    <Text style={styles.axisLabel}>4</Text>
+                    <Text style={styles.axisLabel}>3</Text>
+                    <Text style={styles.axisLabel}>2</Text>
+                    <Text style={styles.axisLabel}>1</Text>
+                    <Text style={styles.axisLabel}>0</Text>
                   </View>
-                  <View style={styles.xAxisLabels}>
-                    <Text style={styles.xAxisLabel}>Day 1</Text>
-                    <Text style={styles.xAxisLabel}>Day 2</Text>
-                    <Text style={styles.xAxisLabel}>Day 3</Text>
-                    <Text style={styles.xAxisLabel}>Day 4</Text>
-                    <Text style={styles.xAxisLabel}>Day 5</Text>
-                    <Text style={styles.xAxisLabel}>Day 6</Text>
-                    <Text style={styles.xAxisLabel}>Day 7</Text>
-                    <Text style={styles.xAxisLabel}>Day 8</Text>
-                    <Text style={styles.xAxisLabel}>Day 10</Text>
+                  <View style={styles.lineChartArea}>
+                    {/* Render actual chart data here */}
+                    <View style={styles.lineChartPlaceholder}>
+                      <Text style={styles.lineChartText}>📈 Line Chart</Text>
+                    </View>
+                    <View style={styles.xAxisLabels}>
+                      <Text style={styles.xAxisLabel}>Day 1</Text>
+                      <Text style={styles.xAxisLabel}>Day 2</Text>
+                      <Text style={styles.xAxisLabel}>Day 3</Text>
+                      <Text style={styles.xAxisLabel}>Day 4</Text>
+                      <Text style={styles.xAxisLabel}>Day 5</Text>
+                      <Text style={styles.xAxisLabel}>Day 6</Text>
+                      <Text style={styles.xAxisLabel}>Day 7</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-              <Text style={styles.chartAxisTitle}>Time (Day)</Text>
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <Text style={styles.noDataText}>No time to fix data available for selected release</Text>
+                </View>
+              )}
+              <Text style={styles.chartAxisTitle}>Defects Fixed</Text>
             </View>
           </View>
 
@@ -1439,6 +1579,68 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
+  // Release Filter
+  releaseFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  releaseFilterLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#222',
+    marginRight: 12,
+  },
+  releaseDropdownContainer: {
+    flex: 1,
+  },
+  releaseDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    elevation: 2,
+  },
+  releaseDropdownText: {
+    fontSize: 14,
+    color: '#222',
+    fontWeight: '500',
+  },
+  releaseDropdownArrow: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+  },
+  releaseDropdownOptions: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    elevation: 4,
+    zIndex: 1000,
+    marginTop: 4,
+  },
+  releaseOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  releaseOptionText: {
+    fontSize: 14,
+    color: '#222',
+  },
+
   // Time Charts
   timeChartsRow: {
     flexDirection: 'row',
@@ -1507,6 +1709,38 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 4,
+  },
+
+  // Loading and No Data States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 120,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 120,
+  },
+  noDataText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 4,
+  },
+  noDataSubtext: {
+    fontSize: 10,
+    color: '#aaa',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    fontStyle: 'italic',
   },
 
   // Module Chart (Pie Chart with Legend)
@@ -1687,17 +1921,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
 
-  // No Data Styles
-  noDataContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-  },
+
 
   // Dynamic Pie Chart Styles
   dynamicPieChart: {
