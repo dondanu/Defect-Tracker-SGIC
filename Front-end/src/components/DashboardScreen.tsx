@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+    import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, SafeAreaView, ActivityIndicator, RefreshControl
 } from 'react-native';
@@ -175,7 +175,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   }, []);
 
   // BACKGROUND: Load colors without blocking UI
-  const loadProjectColors = useCallback(async (projects, authToken) => {
+  const loadProjectColors = useCallback(async (projects: any[], authToken: string) => {
     setLoadingColors(true);
     const fetchOptions = {
       headers: {
@@ -189,7 +189,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     try {
     // Load priority colors first
-    const priorityPromises = priorityProjects.map(async (project) => {
+    const priorityPromises = priorityProjects.map(async (project: any) => {
       try {
         const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
         console.log('API CALL:', colorUrl);
@@ -212,7 +212,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       // Load remaining colors in background (don't wait)
       if (remainingProjects.length > 0) {
         setTimeout(async () => {
-          const remainingPromises = remainingProjects.map(async (project) => {
+          const remainingPromises = remainingProjects.map(async (project: any) => {
             try {
               const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
               console.log('API CALL:', colorUrl);
