@@ -10,9 +10,7 @@ export async function getReleasesByProjectId(projectId: number, authToken?: stri
   // Use the actual existing backend endpoint
   const url = `${baseUrl}/api/v1/releases/project/${projectId}`;
   
-  console.log('DEBUG: Fetching releases from URL:', url);
-  console.log('DEBUG: Auth token present:', !!authToken);
-  console.log('DEBUG: Auth token length:', authToken ? authToken.length : 0);
+  console.log('API CALL:', url);
   
   try {
     const fetchOptions: any = {
@@ -28,22 +26,14 @@ export async function getReleasesByProjectId(projectId: number, authToken?: stri
       console.log('DEBUG: No auth token provided');
     }
     
-    console.log('DEBUG: Fetch options:', JSON.stringify(fetchOptions, null, 2));
-    
     const response = await fetch(url, fetchOptions);
-    
-    console.log('DEBUG: Response status:', response.status);
-    console.log('DEBUG: Response status text:', response.statusText);
-    console.log('DEBUG: Response headers:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.log('DEBUG: Error response body:', errorText);
       throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('DEBUG: Success response data:', data);
     return data;
   } catch (error) {
     console.error('Error fetching releases:', error);
@@ -59,8 +49,7 @@ export async function getTimeToFindDefects(projectId: number, releaseName: strin
   }
   // Use the correct endpoint: /api/v1/dashboard/releases/{projectId}/{releaseName}/defects/daily
   const url = `${baseUrl}/api/v1/dashboard/releases/${projectId}/${releaseName}/defects/daily`;
-  
-  console.log('DEBUG: Fetching time to find defects from URL:', url);
+  console.log('API CALL:', url);
   
   try {
     const fetchOptions: any = {
@@ -80,7 +69,6 @@ export async function getTimeToFindDefects(projectId: number, releaseName: strin
     }
     
     const data = await response.json();
-    console.log('DEBUG: Time to find defects data:', data);
     return data;
   } catch (error) {
     console.error('Error fetching time to find defects:', error);
@@ -96,8 +84,7 @@ export async function getTimeToFixDefects(projectId: number, releaseId: number, 
   }
   // Use the correct endpoint: /api/v1/dashboard/daily-fix/{projectId}/{releaseId}
   const url = `${baseUrl}/api/v1/dashboard/daily-fix/${projectId}/${releaseId}`;
-  
-  console.log('DEBUG: Fetching time to fix defects from URL:', url);
+  console.log('API CALL:', url);
   
   try {
     const fetchOptions: any = {
@@ -117,7 +104,6 @@ export async function getTimeToFixDefects(projectId: number, releaseId: number, 
     }
     
     const data = await response.json();
-    console.log('DEBUG: Time to fix defects data:', data);
     return data;
   } catch (error) {
     console.error('Error fetching time to fix defects:', error);
