@@ -12,6 +12,7 @@ import { getDefectTypeByProjectId } from '../api/defecttype';
 import { getDefectsByModule } from '../api/defectbymodule';
 import { getDefectDensity } from '../api/defectdensity';
 import { getReleasesByProjectId, getTimeToFindDefects, getTimeToFixDefects } from '../api/release';
+import { LineChart } from 'react-native-chart-kit';
 import GaugeChart from './GaugeChart';
 import DynamicPieChart from './DynamicPieChart';
 import SeverityPieChart from './SeverityPieChart';
@@ -80,13 +81,33 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
       
       // Fetch releases for the project
       const releasesResponse = await getReleasesByProjectId(projectId, token || undefined);
-      setReleases(releasesResponse.data || []);
+      console.log('DEBUG: Full releases response:', JSON.stringify(releasesResponse, null, 2));
+      
+      // The releases might be directly in the response or nested under data
+      const releases = releasesResponse.data?.releases || releasesResponse.releases || releasesResponse.data || [];
+      console.log('DEBUG: Extracted releases:', releases);
+      
+      setReleases(releases);
+      
+      // Keep "ALL Releases" as default, don't auto-select any specific release
+      if (releases.length > 0 && releaseId === 'all') {
+        console.log('DEBUG: Keeping ALL Releases as default selection');
+        // Don't auto-select, just show empty charts for "ALL Releases"
+        setTimeToFindData(null);
+        setTimeToFixData(null);
+        return;
+      }
       
       // If a specific release is selected, fetch its time data
       if (releaseId && releaseId !== 'all') {
         try {
+          console.log('DEBUG: Looking for release with ID:', releaseId);
+          console.log('DEBUG: Available releases:', releases);
+          
           // Find the selected release to get its name and ID
-          const selectedReleaseData = releasesResponse.data?.releases?.find((r: any) => r.id.toString() === releaseId);
+          const selectedReleaseData = releases.find((r: any) => r.id.toString() === releaseId);
+          
+          console.log('DEBUG: Found release data:', selectedReleaseData);
           
           if (selectedReleaseData) {
             const releaseName = selectedReleaseData.releaseName || selectedReleaseData.name;
@@ -96,13 +117,17 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
             
             // Fetch time to find defects (uses projectId and releaseName)
             const findData = await getTimeToFindDefects(projectId, releaseName, token || undefined);
+            console.log('DEBUG: Time to find defects response:', findData);
             setTimeToFindData(findData);
             
             // Fetch time to fix defects (uses projectId and releaseId)
             const fixData = await getTimeToFixDefects(projectId, releaseIdNum, token || undefined);
+            console.log('DEBUG: Time to fix defects response:', fixData);
             setTimeToFixData(fixData);
           } else {
             console.log('DEBUG: Selected release not found in releases data');
+            console.log('DEBUG: releaseId:', releaseId);
+            console.log('DEBUG: releases data:', releases);
             setTimeToFindData(null);
             setTimeToFixData(null);
           }
@@ -358,6 +383,10 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
   // Effect to handle release selection changes
   useEffect(() => {
+    console.log('DEBUG: Release selection useEffect triggered');
+    console.log('DEBUG: selectedProjectTab:', selectedProjectTab);
+    console.log('DEBUG: selectedRelease:', selectedRelease);
+    
     if (selectedProjectTab) {
       try {
         fetchReleaseData(selectedProjectTab, selectedRelease);
@@ -952,8 +981,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                 onPress={() => setShowReleaseDropdown(!showReleaseDropdown)}
               >
                 <Text style={styles.releaseDropdownText}>
-                  {selectedRelease === 'all' ? 'All Releases' : 
-                   releases.find(r => r.id.toString() === selectedRelease)?.releaseName || 'All Releases'}
+                  {selectedRelease === 'all' ? 'ALL Releases' : 
+                   releases.find(r => r.id.toString() === selectedRelease)?.releaseName || 'ALL Releases'}
                 </Text>
                 <Text style={styles.releaseDropdownArrow}>▼</Text>
               </TouchableOpacity>
@@ -968,7 +997,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                       setShowReleaseDropdown(false);
                     }}
                   >
-                    <Text style={styles.releaseOptionText}>All Releases</Text>
+                    <Text style={styles.releaseOptionText}>ALL Releases</Text>
                   </TouchableOpacity>
                   {releases.map((release) => (
                     <TouchableOpacity
@@ -987,90 +1016,123 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
             </View>
           </View>
           
-          {/* Time Charts Row */}
-          <View style={styles.timeChartsRow}>
-            {/* Time to Find Defects */}
-            <View style={styles.timeChartCard}>
-              <Text style={styles.timeChartTitle}>Time to Find Defects</Text>
-              {loadingReleaseData ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Loading...</Text>
-                </View>
-              ) : timeToFindData && timeToFindData.data ? (
-                <View style={styles.lineChartContainer}>
-                  <View style={styles.yAxisLabels}>
-                    <Text style={styles.axisLabel}>14</Text>
-                    <Text style={styles.axisLabel}>12</Text>
-                    <Text style={styles.axisLabel}>10</Text>
-                    <Text style={styles.axisLabel}>8</Text>
-                    <Text style={styles.axisLabel}>6</Text>
-                    <Text style={styles.axisLabel}>4</Text>
-                    <Text style={styles.axisLabel}>2</Text>
-                    <Text style={styles.axisLabel}>0</Text>
-                  </View>
-                  <View style={styles.lineChartArea}>
-                    {/* Render actual chart data here */}
-                    <View style={styles.lineChartPlaceholder}>
-                      <Text style={styles.lineChartText}>📈 Line Chart</Text>
-                    </View>
-                    <View style={styles.xAxisLabels}>
-                      <Text style={styles.xAxisLabel}>Day 1</Text>
-                      <Text style={styles.xAxisLabel}>Day 2</Text>
-                      <Text style={styles.xAxisLabel}>Day 3</Text>
-                      <Text style={styles.xAxisLabel}>Day 4</Text>
-                      <Text style={styles.xAxisLabel}>Day 5</Text>
-                      <Text style={styles.xAxisLabel}>Day 6</Text>
-                      <Text style={styles.xAxisLabel}>Day 7</Text>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>No time to find data available for selected release</Text>
-                </View>
-              )}
-              <Text style={styles.chartAxisTitle}>Defects Count</Text>
-            </View>
+          {/* Time Charts - Vertical Layout */}
+          {/* Time to Find Defects */}
+          <View style={styles.timeChartCard}>
+            <Text style={styles.timeChartTitle}>Time to Find Defects</Text>
+            {loadingReleaseData ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading...</Text>
+              </View>
+            ) : timeToFindData && timeToFindData.data ? (
+              <View style={styles.chartContainer}>
+                <LineChart
+                  data={{
+                    labels: timeToFindData.data.map((day: any) => `Day ${day.dayNumber}`),
+                    datasets: [
+                      {
+                        data: timeToFindData.data.map((day: any) => day.totalDefects),
+                        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`, // Blue
+                        strokeWidth: 3,
+                      }
+                    ]
+                  }}
+                  width={screenWidth - 80} // Adjust width for card padding
+                  height={180}
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '2',
+                      stroke: '#3b82f6',
+                      fill: '#ffffff',
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: '#e5e7eb',
+                      strokeWidth: 1,
+                    },
+                  }}
+                  bezier
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16,
+                  }}
+                />
+                <Text style={styles.chartLabel}>Defects Count</Text>
+              </View>
+            ) : (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>No time to find data available for selected release</Text>
+              </View>
+            )}
+          </View>
 
-            {/* Time to Fix Defects */}
-            <View style={styles.timeChartCard}>
-              <Text style={styles.timeChartTitle}>Time to Fix Defects</Text>
-              {loadingReleaseData ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Loading...</Text>
-                </View>
-              ) : timeToFixData && timeToFixData.data ? (
-                <View style={styles.lineChartContainer}>
-                  <View style={styles.yAxisLabels}>
-                    <Text style={styles.axisLabel}>4</Text>
-                    <Text style={styles.axisLabel}>3</Text>
-                    <Text style={styles.axisLabel}>2</Text>
-                    <Text style={styles.axisLabel}>1</Text>
-                    <Text style={styles.axisLabel}>0</Text>
-                  </View>
-                  <View style={styles.lineChartArea}>
-                    {/* Render actual chart data here */}
-                    <View style={styles.lineChartPlaceholder}>
-                      <Text style={styles.lineChartText}>📈 Line Chart</Text>
-                    </View>
-                    <View style={styles.xAxisLabels}>
-                      <Text style={styles.xAxisLabel}>Day 1</Text>
-                      <Text style={styles.xAxisLabel}>Day 2</Text>
-                      <Text style={styles.xAxisLabel}>Day 3</Text>
-                      <Text style={styles.xAxisLabel}>Day 4</Text>
-                      <Text style={styles.xAxisLabel}>Day 5</Text>
-                      <Text style={styles.xAxisLabel}>Day 6</Text>
-                      <Text style={styles.xAxisLabel}>Day 7</Text>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.noDataContainer}>
-                  <Text style={styles.noDataText}>No time to fix data available for selected release</Text>
-                </View>
-              )}
-              <Text style={styles.chartAxisTitle}>Defects Fixed</Text>
-            </View>
+          {/* Time to Fix Defects */}
+          <View style={styles.timeChartCard}>
+            <Text style={styles.timeChartTitle}>Time to Fix Defects</Text>
+            {loadingReleaseData ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading...</Text>
+              </View>
+            ) : timeToFixData && timeToFixData.dailyData ? (
+              <View style={styles.chartContainer}>
+                <LineChart
+                  data={{
+                    labels: timeToFixData.dailyData.map((day: any) => `Day ${day.dayNumber}`),
+                    datasets: [
+                      {
+                        data: timeToFixData.dailyData.map((day: any) => day.defectFixedCount),
+                        color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`, // Green
+                        strokeWidth: 3,
+                      }
+                    ]
+                  }}
+                  width={screenWidth - 80} // Adjust width for card padding
+                  height={180}
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#ffffff',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '2',
+                      stroke: '#10b981',
+                      fill: '#ffffff',
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: '#e5e7eb',
+                      strokeWidth: 1,
+                    },
+                  }}
+                  bezier
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16,
+                  }}
+                />
+                <Text style={styles.chartLabel}>Defects Fixed</Text>
+              </View>
+            ) : (
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>No time to fix data available for selected release</Text>
+              </View>
+            )}
           </View>
 
           {/* Defects by Module Chart */}
@@ -1741,6 +1803,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 16,
     fontStyle: 'italic',
+  },
+
+  // Chart Styles
+  chartCanvas: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+    height: 100,
+  },
+  chartBar: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: 30,
+    height: 100,
+    position: 'relative',
+  },
+  barFill: {
+    width: 20,
+    borderRadius: 2,
+    position: 'absolute',
+    bottom: 0,
+  },
+  barLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  
+  // Line Chart Styles
+  chartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  chartLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
   },
 
   // Module Chart (Pie Chart with Legend)
