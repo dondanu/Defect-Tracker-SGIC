@@ -453,7 +453,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </View>
         ) : (
           <View style={styles.projectCardsRow}>
-            {filteredProjects.map((project) => {
+            {([...filteredProjects].sort((a, b) => {
+              const priority: { [k in 'high' | 'medium' | 'low']: number } = { high: 0, medium: 1, low: 2 };
+              const ra = projectRisks[a.id] || 'low';
+              const rb = projectRisks[b.id] || 'low';
+              return priority[ra] - priority[rb];
+            })).map((project) => {
               const risk = projectRisks[project.id];
               const projectColor = cardColors[project.id] || getRiskColor(risk);
               const isColorLoading = loadingColors && !cardColors[project.id];
@@ -633,57 +638,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
-    marginTop: 16,
-    paddingHorizontal: 16,
+    marginTop: 20,
+    paddingHorizontal: 12,
   },
   projectCardWrapper: {
-    width: '33.33%', // This ensures exactly 3 cards per row
-    marginBottom: 6,
+    width: '33.33%', // keep 3 per row
+    marginBottom: 14,
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
   },
   projectCard: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 112,
+    height: 113,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     position: 'relative',
-    borderWidth: 4,
+    borderWidth: 5,
     borderColor: '#fff',
     backgroundColor: '#ce1111', // fallback
   },
   projectCardText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: 10,
+    paddingHorizontal: 6,
   },
   riskLabel: {
     position: 'absolute',
-    bottom: 10,
-    left: 12,
-    right: 12,
-    borderRadius: 12,
-    paddingVertical: 4,
+    bottom: 12,
+    alignSelf: 'center',
+    borderRadius: 11,
+    paddingVertical: 2,
     paddingHorizontal: 6,
     alignItems: 'center',
+    maxWidth: '100%',
     backgroundColor: 'rgba(0,0,0,0.2)', // Semi-transparent overlay
   },
   riskLabelText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 10,
+    fontSize: 11,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,

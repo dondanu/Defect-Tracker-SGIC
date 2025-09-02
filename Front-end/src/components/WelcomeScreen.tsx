@@ -31,7 +31,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onContinue }) => {
 			<StatusBar barStyle="light-content" backgroundColor="#1a237e" />
 			<LinearGradient colors={["#1a237e", "#3949ab", "#5c6bc0"]} style={styles.gradient}>
 				<View style={styles.centerContent}>
-					<Logo size={160} showText={true} showSubtitle={true} />
+					<Logo size={160} showText={false} showSubtitle={false} />
 					<Text style={styles.appName}>SGIC Defect Tracker</Text>
 					<Text style={styles.tagline}>Track. Resolve. Deliver.</Text>
 				</View>
@@ -49,12 +49,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: 'space-between',
 	},
-	centerContent: {
-		flex: 1,
-		alignItems: 'center',
-		justifyContent: 'center',
-		paddingHorizontal: 24,
-	},
+	  centerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 24,
+    paddingTop: 220,
+  },
 	appName: {
 		marginTop: 12,
 		fontSize: 26,
