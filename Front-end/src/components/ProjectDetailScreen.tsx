@@ -81,11 +81,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
       
       // Fetch releases for the project
       const releasesResponse = await getReleasesByProjectId(projectId, token || undefined);
-      console.log('DEBUG: Full releases response:', JSON.stringify(releasesResponse, null, 2));
-      
       // The releases might be directly in the response or nested under data
       const releases = releasesResponse.data?.releases || releasesResponse.releases || releasesResponse.data || [];
-      console.log('DEBUG: Extracted releases:', releases);
       
       setReleases(releases);
       
@@ -101,38 +98,28 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
       // If a specific release is selected, fetch its time data
       if (releaseId && releaseId !== 'all') {
         try {
-          console.log('DEBUG: Looking for release with ID:', releaseId);
-          console.log('DEBUG: Available releases:', releases);
           
           // Find the selected release to get its name and ID
           const selectedReleaseData = releases.find((r: any) => r.id.toString() === releaseId);
           
-          console.log('DEBUG: Found release data:', selectedReleaseData);
           
           if (selectedReleaseData) {
             const releaseName = selectedReleaseData.releaseName || selectedReleaseData.name;
             const releaseIdNum = selectedReleaseData.id;
             
-            console.log('DEBUG: Fetching time data for release:', releaseName, 'ID:', releaseIdNum);
-            
             // Fetch time to find defects (uses projectId and releaseName)
             const findData = await getTimeToFindDefects(projectId, releaseName, token || undefined);
-            console.log('DEBUG: Time to find defects response:', findData);
             setTimeToFindData(findData);
             
             // Fetch time to fix defects (uses projectId and releaseId)
             const fixData = await getTimeToFixDefects(projectId, releaseIdNum, token || undefined);
-            console.log('DEBUG: Time to fix defects response:', fixData);
             setTimeToFixData(fixData);
           } else {
-            console.log('DEBUG: Selected release not found in releases data');
-            console.log('DEBUG: releaseId:', releaseId);
-            console.log('DEBUG: releases data:', releases);
             setTimeToFindData(null);
             setTimeToFixData(null);
           }
         } catch (error) {
-          console.error('Error fetching time data for release:', error);
+          // Silently handle
           setTimeToFindData(null);
           setTimeToFixData(null);
         }
@@ -215,22 +202,18 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
         const token = await AsyncStorage.getItem('authToken');
 
-        // Helper to fetch and log status/errors
-        const fetchWithStatus = async (url: string, label: string) => {
+        // Helper to fetch silently (only API URL is logged elsewhere)
+        const fetchWithStatus = async (url: string) => {
           try {
             const res = await fetch(url, {
               headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
-            console.log(`API STATUS [${label}]:`, res.status, res.statusText);
-            let data = null;
             try {
-              data = await res.json();
-            } catch (jsonErr) {
-              console.log(`API JSON ERROR [${label}]:`, jsonErr);
+              return await res.json();
+            } catch {
+              return null;
             }
-            return data;
-          } catch (err) {
-            console.log(`API FETCH ERROR [${label}]:`, err);
+          } catch {
             return null;
           }
         };
@@ -246,25 +229,17 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           defectDensityData,
           defectsByModuleDataRes
         ] = await Promise.all([
-          fetchWithStatus(apiUrls[0], 'defect-statistics'),
-          fetchWithStatus(apiUrls[1], 'defect_severity_summary'),
-          fetchWithStatus(apiUrls[2], 'defect-remark-ratio'),
-          fetchWithStatus(apiUrls[3], 'dsi'),
-          fetchWithStatus(apiUrls[4], 'defect-type'),
-          fetchWithStatus(apiUrls[5], 'reopen-count_summary'),
-          fetchWithStatus(apiUrls[6], 'defect-density'),
-          fetchWithStatus(apiUrls[7], 'module')
+          fetchWithStatus(apiUrls[0]),
+          fetchWithStatus(apiUrls[1]),
+          fetchWithStatus(apiUrls[2]),
+          fetchWithStatus(apiUrls[3]),
+          fetchWithStatus(apiUrls[4]),
+          fetchWithStatus(apiUrls[5]),
+          fetchWithStatus(apiUrls[6]),
+          fetchWithStatus(apiUrls[7])
         ]);
 
-        // Debug: Log all API responses
-        console.log('API RESPONSE: defect-statistics', statsData);
-        console.log('API RESPONSE: defect_severity_summary', severityData);
-        console.log('API RESPONSE: defect-remark-ratio', remarkRatioData);
-        console.log('API RESPONSE: dsi', dsiData);
-        console.log('API RESPONSE: defect-type', defectTypeDataRes);
-        console.log('API RESPONSE: reopen-count_summary', reopenData);
-        console.log('API RESPONSE: defect-density', defectDensityData);
-        console.log('API RESPONSE: module', defectsByModuleDataRes);
+        // Suppressed response logs
 
         // 1. Defect statistics
         if (statsData && statsData.data) {
@@ -275,10 +250,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
         // 3. Defect severity summary
         if (severityData && severityData.data && severityData.data.defectSummary) {
-          console.log('DEBUG: defectSummary raw array:', severityData.data.defectSummary);
           const transformedData = { high: {}, medium: {}, low: {}, totalDefects: severityData.data.totalDefects };
-          severityData.data.defectSummary.forEach((item: any, idx: number) => {
-            console.log('DEBUG: defectSummary item', idx, item);
+          severityData.data.defectSummary.forEach((item: any) => {
             const level = item.severity?.toLowerCase();
             if (level === 'high' || level === 'medium' || level === 'low') {
               const obj = { total: item.totalDefects || 0, statuses: item.statuses || {} };
@@ -383,9 +356,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
   // Effect to handle release selection changes
   useEffect(() => {
-    console.log('DEBUG: Release selection useEffect triggered');
-    console.log('DEBUG: selectedProjectTab:', selectedProjectTab);
-    console.log('DEBUG: selectedRelease:', selectedRelease);
+    // API CALL logs only will be printed within fetch functions
     
     if (selectedProjectTab) {
       try {
@@ -463,7 +434,12 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
             showsHorizontalScrollIndicator={false}
             style={styles.projectTabsContainer}
           >
-            {allProjects.map((project) => (
+            {[...allProjects].sort((a: any, b: any) => {
+              const priority: { [k in 'high' | 'medium' | 'low']: number } = { high: 0, medium: 1, low: 2 };
+              const ra = getProjectRiskFromCardAPI(a.id);
+              const rb = getProjectRiskFromCardAPI(b.id);
+              return priority[ra] - priority[rb];
+            }).map((project) => (
               <TouchableOpacity
                 key={project.id}
                 style={[
