@@ -134,13 +134,18 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
       console.log('LOGIN DEBUG: full response =', response);
 
       if (response.success) {
-        // Save token if provided (API returns token as response.data, which should be a string)
-        if (typeof response.data === 'string') {
-          await AsyncStorage.setItem('authToken', response.data);
+        // Normalize token from various shapes
+        const token = (response as any)?.data?.data?.token
+          || (response as any)?.data?.token
+          || (response as any)?.token
+          || (typeof (response as any)?.data === 'string' ? (response as any).data : undefined);
+
+        if (token) {
+          await AsyncStorage.setItem('authToken', token);
           const checkToken = await AsyncStorage.getItem('authToken');
           console.log('LOGIN DEBUG: authToken saved =', checkToken);
         } else {
-          console.log('LOGIN DEBUG: Unexpected token type:', typeof response.data, response.data);
+          console.log('LOGIN DEBUG: Token not found in response shape:', response);
         }
 
         // Save or clear credentials based on Remember Me
@@ -228,12 +233,16 @@ const LoginScreen: React.FC<LoginProps> = ({ onLogin }) => {
               const response = await loginUser({ username: savedUsername, password: savedPassword });
 
               if (response.success) {
-                if (typeof response.data === 'string') {
-                  await AsyncStorage.setItem('authToken', response.data);
+                const token = (response as any)?.data?.data?.token
+                  || (response as any)?.data?.token
+                  || (response as any)?.token
+                  || (typeof (response as any)?.data === 'string' ? (response as any).data : undefined);
+                if (token) {
+                  await AsyncStorage.setItem('authToken', token);
                   const checkToken = await AsyncStorage.getItem('authToken');
                   console.log('LOGIN DEBUG: authToken saved (biometric) =', checkToken);
                 } else {
-                  console.log('LOGIN DEBUG: Unexpected token type (biometric):', typeof response.data, response.data);
+                  console.log('LOGIN DEBUG: Token not found in response shape (biometric):', response);
                 }
                 onLogin(savedUsername, savedPassword);
               } else {
