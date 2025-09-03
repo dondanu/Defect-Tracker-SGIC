@@ -1,18 +1,25 @@
 const { Sequelize } = require('sequelize');
 const { Defect, Severity, DefectStatus } = require('../models');
 
-// Helper function to compute DSI without relying on `this` binding
+// Helper function to compute DSI using severity.weight and highest possible weight
 const computeDSIInternal = async (projectId) => {
+  const Op = require('sequelize').Op;
+  const statuses = ['NEW', 'OPEN', 'FIXED', 'CLOSED', 'REOPEN', 'HOLD'];
   const rows = await Defect.findAll({
     where: { project_id: projectId, is_active: true },
     attributes: [[Sequelize.fn('COUNT', Sequelize.col('Defect.id')), 'count']],
-    include: [{ model: Severity, as: 'severity', attributes: ['name'], required: true }],
-    group: ['severity.name'],
+    include: [
+      { model: Severity, as: 'severity', attributes: ['name', 'weight'], required: true },
+      { model: DefectStatus, as: 'defectStatus', attributes: [], required: true, where: { name: { [Op.in]: statuses } } }
+    ],
+    group: ['severity.name', 'severity.weight'],
     raw: true
   });
+
+  const highestWeight = (await Severity.max('weight', { where: { is_active: true } })) || 1;
   let total = 0; let weighted = 0;
-  rows.forEach(r => { const sevName = (r['severity.name'] || '').toLowerCase(); const w = sevName === 'high' ? 3 : sevName === 'medium' ? 2 : 1; const c = parseInt(r['count'], 10) || 0; total += c; weighted += c * w; });
-  const max = total * 3; const dsiPercentage = max > 0 ? Number(((weighted / max) * 100).toFixed(2)) : 0;
+  rows.forEach(r => { const w = parseInt(r['severity.weight'], 10) || 1; const c = parseInt(r['count'], 10) || 0; total += c; weighted += c * w; });
+  const max = total * highestWeight; const dsiPercentage = max > 0 ? Number(((weighted / max) * 100).toFixed(2)) : 0;
   return { dsiPercentage };
 };
 
@@ -88,27 +95,31 @@ class DashboardController {
   async getDSI(req, res, next) {
     try {
       const { projectId } = req.params;
+      const Op = require('sequelize').Op;
+      const statuses = ['NEW', 'OPEN', 'FIXED', 'CLOSED', 'REOPEN', 'HOLD'];
       const rows = await Defect.findAll({
+      
         where: { project_id: projectId, is_active: true },
         attributes: [[Sequelize.fn('COUNT', Sequelize.col('Defect.id')), 'count']],
         include: [
-          { model: Severity, as: 'severity', attributes: ['name', 'level'], required: true }
+          { model: Severity, as: 'severity', attributes: ['name', 'level', 'weight'], required: true },
+          { model: DefectStatus, as: 'defectStatus', attributes: [], required: true, where: { name: { [Op.in]: statuses } } }
         ],
-        group: ['severity.name', 'severity.level'],
+        group: ['severity.name', 'severity.level', 'severity.weight'],
         raw: true
       });
 
       let total = 0;
       let weighted = 0;
       rows.forEach(r => {
-        const sevName = (r['severity.name'] || '').toLowerCase();
-        const weight = sevName === 'high' ? 3 : sevName === 'medium' ? 2 : 1;
+        const weight = parseInt(r['severity.weight'], 10) || 1;
         const count = parseInt(r['count'], 10) || 0;
         total += count;
         weighted += count * weight;
       });
 
-      const max = total * 3;
+      const highestWeight = (await Severity.max('weight', { where: { is_active: true } })) || 1;
+      const max = total * highestWeight;
       const dsiPercentage = max > 0 ? Number(((weighted / max) * 100).toFixed(2)) : 0;
       let interpretation = 'Low Risk';
       if (dsiPercentage >= 67) interpretation = 'High Risk';
@@ -145,20 +156,31 @@ class DashboardController {
   async getDefectRemarkRatio(req, res, next) {
     try {
       const projectId = req.query.projectId || req.params.projectId;
-      const { Comment } = require('../models');
+      // remark means total defects in the project
+      const totalDefectsAll = await Defect.count({ where: { project_id: projectId, is_active: true } });
 
-      const totalDefects = await Defect.count({ where: { project_id: projectId, is_active: true } });
-      const totalComments = await Comment.count({
-        include: [{ model: Defect, as: 'defect', where: { project_id: projectId, is_active: true }, attributes: [] }]
+      // defects means count by statuses: NEW, OPEN, FIXED, CLOSED, REOPEN, HOLD
+      const statuses = ['NEW', 'OPEN', 'FIXED', 'CLOSED', 'REOPEN', 'HOLD'];
+      const Op = require('sequelize').Op;
+      const totalDefectsSelected = await Defect.count({
+        where: { project_id: projectId, is_active: true },
+        include: [{
+          model: DefectStatus,
+          as: 'defectStatus',
+          where: { name: { [Op.in]: statuses } },
+          attributes: []
+        }]
       });
 
-      const ratioNum = totalDefects > 0 ? Number(((totalComments / totalDefects) * 100).toFixed(2)) : 0;
-      let category = 'Low';
+      // ratio = (defects / remark) * 100
+      // remark = total defects; defects = selected-status defects
+      const ratioNum = totalDefectsAll > 0 ? Number(((totalDefectsSelected / totalDefectsAll) * 100).toFixed(2)) : 0;
+      let category = 'low';
       let color = 'green';
-      if (ratioNum >= 60) { category = 'High'; color = 'blue'; }
-      else if (ratioNum >= 30) { category = 'Medium'; color = 'yellow'; }
+      if (ratioNum >= 90 && ratioNum <= 98) { category = 'medium'; color = 'yellow'; }
+      else if (ratioNum < 90) { category = 'high'; color = 'red'; }
 
-      res.status(200).json({ success: true, message: 'Defect to remark ratio calculated', data: { ratio: `${ratioNum}%`, category, color, totals: { defects: totalDefects, remarks: totalComments } } });
+      res.status(200).json({ success: true, message: 'Defect to remark ratio calculated', data: { ratio: `${ratioNum}%`, category, color, totals: { defects: totalDefectsSelected, remarks: totalDefectsAll } } });
     } catch (error) { next(error); }
   }
 
