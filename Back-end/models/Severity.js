@@ -26,6 +26,15 @@ module.exports = (sequelize, DataTypes) => {
         max: 10
       }
     },
+    weight: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      validate: {
+        min: 1,
+        max: 100
+      }
+    },
     color_code: {
       type: DataTypes.STRING(7),
       allowNull: true,
@@ -48,6 +57,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['level']
+      },
+      {
+        fields: ['weight']
       },
       {
         fields: ['is_active']
