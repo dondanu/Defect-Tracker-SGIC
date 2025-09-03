@@ -19,6 +19,10 @@ import SeverityPieChart from './SeverityPieChart';
 
 const screenWidth = Dimensions.get('window').width;
 
+// Old remote: 'http://74.235.80.66:8087'
+// New local API base
+const BASE_URL = (process as any)?.env?.VITE_BASE_URL || 'http://192.168.1.45:3000/api';
+
 interface ProjectDetailScreenProps {
   projectId: number;
   projectName: string;
@@ -143,18 +147,25 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
     // Fetch all projects for the project selection tabs
     const fetchAllProjects = async () => {
       try {
-        const projectsUrl = 'http://74.235.80.66:8087/api/v1/projects';
+        const projectsUrl = `${BASE_URL}/projects`;
         console.log('API CALL:', projectsUrl);
         const token = await AsyncStorage.getItem('authToken');
         const response = await fetch(projectsUrl, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         const data = await response.json();
-        setAllProjects(data.data || []);
+        const projects = Array.isArray(data?.data?.projects)
+          ? data.data.projects
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data)
+              ? data
+              : [];
+        setAllProjects(projects);
 
         // Fetch project card colors for all projects
-        (data.data || []).forEach(async (project: any) => {
-          const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
+        (projects || []).forEach(async (project: any) => {
+          const colorUrl = `${BASE_URL}/dashboard/project-card-color/${project.id}`;
           console.log('API CALL:', colorUrl);
           try {
             const colorRes = await fetch(colorUrl, {
@@ -189,14 +200,14 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
       try {
         // Log all API URLs before calling
         const apiUrls = [
-          `http://74.235.80.66:8087/api/v1/defect-statistics/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/defect_severity_summary/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/defect-remark-ratio?projectId=${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/dsi/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/defect-type/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/reopen-count_summary/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/defect-density/${selectedProjectTab}`,
-          `http://74.235.80.66:8087/api/v1/dashboard/module?projectId=${selectedProjectTab}`
+          `${BASE_URL}/defect-statistics/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/defect_severity_summary/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/defect-remark-ratio?projectId=${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/dsi/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/defect-type/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/reopen-count_summary/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/defect-density/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/module?projectId=${selectedProjectTab}`
         ];
         apiUrls.forEach(url => console.log('API CALL:', url));
 
@@ -278,15 +289,25 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setRemarkRatioError(true);
         }
 
-        // 5. Defect severity index (DSI)
-        if (dsiData && dsiData.data && typeof dsiData.data.dsiPercentage === 'number') {
-          setDefectStats(prev => ({ ...prev, severityIndex: dsiData.data.dsiPercentage }));
+        // 5. Defect severity index (DSI) - normalize multiple shapes
+        if (dsiData && dsiData.data) {
+          const raw = (dsiData.data.dsiPercentage ?? dsiData.data.dsi ?? dsiData.data.value ?? dsiData.data);
+          let parsed = 0;
+          if (typeof raw === 'number') parsed = raw;
+          else if (typeof raw === 'string') {
+            const n = parseFloat(raw.replace('%', '').trim());
+            parsed = isNaN(n) ? 0 : n;
+          }
+          setDefectStats(prev => ({ ...prev, severityIndex: parsed }));
           if (dsiData.data.interpretation) {
             setProjectRiskLevel(dsiData.data.interpretation);
+          } else if (parsed <= 25) {
+            setProjectRiskLevel('Low Risk');
+          } else if (parsed <= 75) {
+            setProjectRiskLevel('Medium Risk');
+          } else {
+            setProjectRiskLevel('High Risk');
           }
-        } else if (dsiData && dsiData.data === 0) {
-          setDefectStats(prev => ({ ...prev, severityIndex: 0 }));
-          setProjectRiskLevel('Low Risk');
         }
 
         // 6. Defect density
@@ -434,12 +455,17 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
             showsHorizontalScrollIndicator={false}
             style={styles.projectTabsContainer}
           >
-            {[...allProjects].sort((a: any, b: any) => {
-              const priority: { [k in 'high' | 'medium' | 'low']: number } = { high: 0, medium: 1, low: 2 };
-              const ra = getProjectRiskFromCardAPI(a.id);
-              const rb = getProjectRiskFromCardAPI(b.id);
-              return priority[ra] - priority[rb];
-            }).map((project) => (
+            {[...allProjects]
+              .sort((a: any, b: any) => {
+                // Show the currently selected project first
+                if (a.id === selectedProjectTab && b.id !== selectedProjectTab) return -1;
+                if (b.id === selectedProjectTab && a.id !== selectedProjectTab) return 1;
+                // Then order by risk: High -> Medium -> Low
+                const priority: { [k in 'high' | 'medium' | 'low']: number } = { high: 0, medium: 1, low: 2 };
+                const ra = getProjectRiskFromCardAPI(a.id);
+                const rb = getProjectRiskFromCardAPI(b.id);
+                return priority[ra] - priority[rb];
+              }).map((project) => (
               <TouchableOpacity
                 key={project.id}
                 style={[
@@ -452,7 +478,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                   styles.projectTabText,
                   selectedProjectTab === project.id && styles.selectedProjectTabText
                 ]}>
-                  {project.projectName}
+                  {project.projectName || project.name || `Project ${project.id}`}
                 </Text>
               </TouchableOpacity>
             ))}
