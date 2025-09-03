@@ -1,7 +1,9 @@
 import axios from 'axios';
+import { getCurrentConfig } from './config';
 
-// Base URL for the API
-const BASE_URL = 'http://74.235.80.66:8087/api/v1';
+// Get current API configuration
+const config = getCurrentConfig();
+const BASE_URL = config.baseURL;
 
 // Login request interface
 export interface LoginRequest {
@@ -26,13 +28,13 @@ export interface LoginResponse {
 // Login API function
 export async function loginUser(credentials: LoginRequest): Promise<LoginResponse> {
   try {
-    const apiUrl = `${BASE_URL}/auth/login`;
+    const apiUrl = `${BASE_URL}auth/login`;
     console.log('API CALL:', apiUrl);
     const response = await axios.post(apiUrl, credentials, {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 10000, // 10 second timeout
+      timeout: config.timeout,
     });
 
     return {
@@ -44,19 +46,16 @@ export async function loginUser(credentials: LoginRequest): Promise<LoginRespons
     console.error('Login API error:', error);
     
     if (error.response) {
-      // Server responded with error status
       return {
         success: false,
         message: error.response.data?.message || 'Invalid credentials',
       };
     } else if (error.request) {
-      // Network error
       return {
         success: false,
         message: 'Network error. Please check your connection.',
       };
     } else {
-      // Other error
       return {
         success: false,
         message: 'An unexpected error occurred.',
