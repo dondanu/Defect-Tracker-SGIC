@@ -15,13 +15,18 @@ import { getDefectsByModule } from '../api/defectbymodule';
 import { getDefectSeveritySummary } from '../api/dash_get';
 
 
+// Old: const BASE_URL = 'http://74.235.80.66:8087' (remote)
+// Old: const BASE_URL = 'http://192.168.1.45:3000' (no /api)
+// New local API base (with /api)
+const BASE_URL = 'http://192.168.1.45:3000/api';
+
 const screenWidth = Dimensions.get('window').width;
 
 // Types
 type Project = {
   id: number;
-  projectName: string;
-  // ...other fields as needed
+  name?: string;
+  projectName?: string;
 };
 type Defect = {
   projectId: number;
@@ -93,15 +98,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       };
 
       // FAST: Only load essential data first
-      console.log('API CALL:', 'http://74.235.80.66:8087/api/v1/projects');
-      console.log('API CALL:', 'http://74.235.80.66:8087/api/v1/defectStatus');
+      console.log('API CALL:', `${BASE_URL}/projects`);
+      console.log('API CALL:', `${BASE_URL}/defect-statuses`);
       const [projectsResponse, defectsResponse] = await Promise.all([
-        fetch('http://74.235.80.66:8087/api/v1/projects', fetchOptions),
-        fetch('http://74.235.80.66:8087/api/v1/defectStatus', fetchOptions)
+        fetch(`${BASE_URL}/projects`, fetchOptions),
+        fetch(`${BASE_URL}/defect-statuses`, fetchOptions)
       ]);
       if (!projectsResponse.ok || !defectsResponse.ok) {
-        const projectsText = await projectsResponse.text();
-        const defectsText = await defectsResponse.text();
+        try {
+          console.log('Projects status', projectsResponse.status, await projectsResponse.text());
+        } catch {}
+        try {
+          console.log('Defects status', defectsResponse.status, await defectsResponse.text());
+        } catch {}
         throw new Error('Failed to fetch data from server');
       }
 
@@ -110,15 +119,31 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         defectsResponse.json()
       ]);
 
-      const projects = projectsData.data || [];
-      setProjects(projects);
-      setDefects(defectsData.data || []);
+      // Normalize API shapes
+      const normalizedProjects = Array.isArray(projectsData?.data?.projects)
+        ? projectsData.data.projects
+        : Array.isArray(projectsData?.data)
+          ? projectsData.data
+          : Array.isArray(projectsData)
+            ? projectsData
+            : [];
+
+      const normalizedDefects = Array.isArray(defectsData?.data?.['defect-statuses'])
+        ? defectsData.data['defect-statuses']
+        : Array.isArray(defectsData?.data)
+          ? defectsData.data
+          : Array.isArray(defectsData)
+            ? defectsData
+            : [];
+
+      setProjects(normalizedProjects);
+      setDefects(normalizedDefects);
 
       // --- Additional Dashboard API Integrations ---
       // Use the first project as a sample for dashboard-wide stats (customize as needed)
       if (projects.length > 0) {
         const projectId = projects[0].id;
-        // Log API calls
+        // Log API URLs only
         console.log('API CALL:', `/dashboard/defect-remark-ratio?projectId=${projectId}`);
         console.log('API CALL:', `/dashboard/dsi/${projectId}`);
         console.log('API CALL:', `/dashboard/defect-type/${projectId}`);
@@ -191,11 +216,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     // Load priority colors first
     const priorityPromises = priorityProjects.map(async (project: any) => {
       try {
-        const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
+        const colorUrl = `${BASE_URL}/dashboard/project-card-color/${project.id}`;
         console.log('API CALL:', colorUrl);
         const colorResponse = await fetch(colorUrl, fetchOptions);
-        if (!colorResponse.ok) throw new Error('Color fetch failed');
+        if (!colorResponse.ok) {
+          console.log('Color status', project.id, colorResponse.status, await colorResponse.text());
+          throw new Error('Color fetch failed');
+        }
         const colorRes = await colorResponse.json();
+        console.log('COLOR RES', project.id, colorRes);
         return { projectId: project.id, color: parseColorString(colorRes.data.projectCardColor) };
       } catch {
         return { projectId: project.id, color: '#888' };
@@ -214,11 +243,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setTimeout(async () => {
           const remainingPromises = remainingProjects.map(async (project: any) => {
             try {
-              const colorUrl = `http://74.235.80.66:8087/api/v1/dashboard/project-card-color/${project.id}`;
+              const colorUrl = `${BASE_URL}/dashboard/project-card-color/${project.id}`;
               console.log('API CALL:', colorUrl);
               const colorResponse = await fetch(colorUrl, fetchOptions);
-              if (!colorResponse.ok) throw new Error('Color fetch failed');
+              if (!colorResponse.ok) {
+                console.log('Color status', project.id, colorResponse.status, await colorResponse.text());
+                throw new Error('Color fetch failed');
+              }
               const colorRes = await colorResponse.json();
+              console.log('COLOR RES', project.id, colorRes);
               return { projectId: project.id, color: parseColorString(colorRes.data.projectCardColor) };
             } catch {
               return { projectId: project.id, color: '#888' };
@@ -476,7 +509,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.projectCardText}>{project.projectName}</Text>
+                    <Text style={styles.projectCardText}>{project.name || project.projectName || 'Unnamed'}</Text>
                     <View style={[
                       styles.riskLabel,
                       { backgroundColor: 'rgba(0,0,0,0.2)' }
