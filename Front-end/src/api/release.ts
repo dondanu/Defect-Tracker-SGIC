@@ -2,13 +2,9 @@
 
 // Fetch releases for a specific project
 export async function getReleasesByProjectId(projectId: number, authToken?: string) {
-  let baseUrl = process.env.VITE_BASE_URL || "http://74.235.80.66:8087";
-  // Remove trailing slash if present to avoid double slashes
-  if (baseUrl.endsWith("/")) {
-    baseUrl = baseUrl.slice(0, -1);
-  }
-  // Use the actual existing backend endpoint
-  const url = `${baseUrl}/api/v1/releases/project/${projectId}`;
+  let baseUrl = process.env.VITE_BASE_URL || "http://192.168.1.45:3000/api";
+  // New local endpoint
+  const url = `${baseUrl}/releases/project/${projectId}`;
   
   console.log('API CALL:', url);
   
@@ -43,12 +39,9 @@ export async function getReleasesByProjectId(projectId: number, authToken?: stri
 
 // Fetch time to find defects data for a specific release
 export async function getTimeToFindDefects(projectId: number, releaseName: string, authToken?: string) {
-  let baseUrl = process.env.VITE_BASE_URL || "http://74.235.80.66:8087";
-  if (baseUrl.endsWith("/")) {
-    baseUrl = baseUrl.slice(0, -1);
-  }
-  // Use the correct endpoint: /api/v1/dashboard/releases/{projectId}/{releaseName}/defects/daily
-  const url = `${baseUrl}/api/v1/dashboard/releases/${projectId}/${releaseName}/defects/daily`;
+  let baseUrl = process.env.VITE_BASE_URL || "http://192.168.1.45:3000/api";
+  // New local endpoint: /api/dashboard/releases/{projectId}/{releaseName}/defects/daily
+  const url = `${baseUrl}/dashboard/releases/${projectId}/${releaseName}/defects/daily`;
   console.log('API CALL:', url);
   
   try {
@@ -78,12 +71,9 @@ export async function getTimeToFindDefects(projectId: number, releaseName: strin
 
 // Fetch time to fix defects data for a specific release
 export async function getTimeToFixDefects(projectId: number, releaseId: number, authToken?: string) {
-  let baseUrl = process.env.VITE_BASE_URL || "http://74.235.80.66:8087";
-  if (baseUrl.endsWith("/")) {
-    baseUrl = baseUrl.slice(0, -1);
-  }
-  // Use the correct endpoint: /api/v1/dashboard/daily-fix/{projectId}/{releaseId}
-  const url = `${baseUrl}/api/v1/dashboard/daily-fix/${projectId}/${releaseId}`;
+  let baseUrl = process.env.VITE_BASE_URL || "http://192.168.1.45:3000/api";
+  // New local endpoint: /api/dashboard/daily-fix/{projectId}/{releaseId}
+  const url = `${baseUrl}/dashboard/daily-fix/${projectId}/${releaseId}`;
   console.log('API CALL:', url);
   
   try {

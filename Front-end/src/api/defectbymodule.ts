@@ -2,9 +2,8 @@ import axios from "axios";
 
 // Fetch defects by module for a given project
 export async function getDefectsByModule(projectId: string | number) {
-  // Use the same base URL pattern as other components in the project
-  const baseUrl = 'http://74.235.80.66:8087/api/v1';
-  const url = `${baseUrl}/dashboard/module?projectId=${projectId}`;
+  let baseUrl = process.env.VITE_BASE_URL || "";
+  const url = `${baseUrl}/api/v1/dashboard/module?projectId=${projectId}`;
   const response = await axios.get(url);
   return response.data;
 }
