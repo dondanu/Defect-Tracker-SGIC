@@ -47,7 +47,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
     high: { recent: 0, expired: 0, open: 0, fixed: 0, duplicate: 0, total: 12 },
     medium: { recent: 0, logical: 0, open: 0, backlog: 0, duplicate: 0, total: 8 },
     low: { recent: 0, logical: 0, open: 0, fixed: 0, duplicate: 0, total: 3 },
-    density: 10.12,
+    density: 0,
     severityIndex: 43.6,
     remarkRatio: 97.75,
     remarkCategory: 'High',
@@ -262,10 +262,34 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
         // 3. Defect severity summary
         if (severityData && severityData.data && severityData.data.defectSummary) {
           const transformedData = { high: {}, medium: {}, low: {}, totalDefects: severityData.data.totalDefects };
+
+          const normalizeStatuses = (raw: any) => {
+            const safe = raw || {};
+            const wrap = (val: any) => {
+              if (val == null) return { count: 0 };
+              if (typeof val === 'number') return { count: val };
+              if (typeof val === 'object' && typeof val.count === 'number') return { count: val.count };
+              return { count: 0 };
+            };
+            const pick = (variants: string[]) => {
+              for (const k of variants) {
+                if (k in safe) return wrap(safe[k]);
+              }
+              return { count: 0 };
+            };
+            return {
+              REOPEN: pick(['REOPEN', 'reopen', 'Reopen', 're-open', 'reject', 'Reject']),
+              NEW: pick(['NEW', 'new', 'New']),
+              OPEN: pick(['OPEN', 'open', 'Open']),
+              FIXED: pick(['FIXED', 'fixed', 'Fixed', 'CLOSED', 'closed', 'Close']),
+              DUPLICATE: pick(['DUPLICATE', 'duplicate', 'Duplicate'])
+            };
+          };
+
           severityData.data.defectSummary.forEach((item: any) => {
             const level = item.severity?.toLowerCase();
             if (level === 'high' || level === 'medium' || level === 'low') {
-              const obj = { total: item.totalDefects || 0, statuses: item.statuses || {} };
+              const obj = { total: item.totalDefects || 0, statuses: normalizeStatuses(item.statuses) };
               (transformedData as any)[level] = obj;
             }
           });
@@ -310,10 +334,10 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           }
         }
 
-        // 6. Defect density
+        // 6. Defect density: set to API value when number, otherwise force 0
         if (defectDensityData && defectDensityData.data && typeof defectDensityData.data.defectDensity === 'number') {
           setDefectStats(prev => ({ ...prev, density: defectDensityData.data.defectDensity }));
-        } else if (defectDensityData && defectDensityData.data === 0) {
+        } else {
           setDefectStats(prev => ({ ...prev, density: 0 }));
         }
 
@@ -703,15 +727,14 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
               <View style={styles.thermometerBody}>
                 {/* Background tube */}
                 <View style={styles.thermometerTube}>
-                  {/* Dynamic fill based on DSI percentage */}
+                  {/* Dynamic fill based on DSI percentage (0-25 green, 26-50 yellow, 51-100 red) */}
                   <View style={[
                     styles.thermometerFill,
                     {
                       height: `${Math.min(Math.max(defectStats.severityIndex, 0), 100)}%`,
                       backgroundColor:
-                        defectStats.severityIndex > 75 ? '#dc2626' : // Red
-                        defectStats.severityIndex > 50 ? '#2563eb' : // Blue
-                        defectStats.severityIndex > 25 ? '#fbbf24' : // Yellow
+                        defectStats.severityIndex >= 51 ? '#dc2626' : // Red
+                        defectStats.severityIndex >= 26 ? '#fbbf24' : // Yellow
                         '#10b981' // Green
                     }
                   ]} />
@@ -722,9 +745,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                   styles.thermometerBulb,
                   {
                     backgroundColor:
-                      defectStats.severityIndex > 75 ? '#dc2626' : // Red
-                      defectStats.severityIndex > 50 ? '#2563eb' : // Blue
-                      defectStats.severityIndex > 25 ? '#fbbf24' : // Yellow
+                      defectStats.severityIndex >= 51 ? '#dc2626' : // Red
+                      defectStats.severityIndex >= 26 ? '#fbbf24' : // Yellow
                       '#10b981' // Green
                   }
                 ]} />
@@ -736,9 +758,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                   styles.severityValue,
                   {
                     color:
-                      defectStats.severityIndex > 75 ? '#dc2626' : // Red
-                      defectStats.severityIndex > 50 ? '#2563eb' : // Blue
-                      defectStats.severityIndex > 25 ? '#fbbf24' : // Yellow
+                      defectStats.severityIndex >= 51 ? '#dc2626' : // Red
+                      defectStats.severityIndex >= 26 ? '#fbbf24' : // Yellow
                       '#10b981' // Green
                   }
                 ]}>{defectStats.severityIndex}</Text>
@@ -798,13 +819,23 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                     data={reopenCountData && Array.isArray(reopenCountData) ?
                       (() => {
                         // Calculate total for percentages
-                        const total = reopenCountData.reduce((sum, item) => sum + item.count, 0);
+                        const total = reopenCountData.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
 
-                        return reopenCountData.map(item => ({
-                          defectType: item.label || `${item.reopenCount} times`,
-                          defectCount: item.count,
-                          percentage: total > 0 ? ((item.count / total) * 100) : 0
-                        }));
+                        return reopenCountData.map((item: any, index: number) => {
+                          const count = item.count || 0;
+                          const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                          return (
+                            <View key={index} style={styles.pieChartLegendItem}>
+                              <View style={[
+                                styles.pieChartLegendDot,
+                                { backgroundColor: getColor(index) }
+                              ]} />
+                              <Text style={styles.pieChartLegendText}>
+                                {item.label || `${item.reopenCount || 0} times`}: {count} ({percentage}%)
+                              </Text>
+                            </View>
+                          );
+                        });
                       })() : []
                     }
                     size={140}
@@ -823,10 +854,11 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                       };
 
                       // Calculate total for percentages
-                      const total = reopenCountData.reduce((sum: number, item: any) => sum + item.count, 0);
+                      const total = reopenCountData.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
 
                       return reopenCountData.map((item: any, index: number) => {
-                        const percentage = total > 0 ? ((item.count / total) * 100).toFixed(1) : '0.0';
+                        const count = item.count || 0;
+                        const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
                         return (
                           <View key={index} style={styles.pieChartLegendItem}>
                             <View style={[
@@ -834,7 +866,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                               { backgroundColor: getColor(index) }
                             ]} />
                             <Text style={styles.pieChartLegendText}>
-                              {item.label || `${item.reopenCount} times`}: {item.count} ({percentage}%)
+                              {item.label || `${item.reopenCount || 0} times`}: {count} ({percentage}%)
                             </Text>
                           </View>
                         );
@@ -909,7 +941,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                                     { backgroundColor: getColor(i + rowIndex) }
                                   ]} />
                                   <Text style={styles.multiLegendText}>
-                                    {item.defectType}: {item.defectCount} ({item.percentage.toFixed(1)}%)
+                                    {item.defectType || 'Unknown'}: {item.defectCount || 0} {item.percentage ? `(${item.percentage.toFixed(1)}%)` : ''}
                                   </Text>
                                 </View>
                               ))}
