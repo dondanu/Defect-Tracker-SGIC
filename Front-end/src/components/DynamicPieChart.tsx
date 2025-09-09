@@ -40,14 +40,28 @@ const DynamicPieChart: React.FC<DynamicPieChartProps> = ({
   const createPieSlices = () => {
     if (!data || data.length === 0) return [];
 
+    // Normalize and filter invalid items
+    const safeData = data
+      .map((item) => ({
+        ...item,
+        percentage: Number.isFinite(item?.percentage) ? item.percentage : 0
+      }))
+      .filter((item) => item.percentage > 0);
+
+    if (safeData.length === 0) return [];
+
     const center = size / 2;
     const radius = (size - strokeWidth * 2) / 2;
     let currentAngle = -90; // Start from top
     const spacing = 2; // Degrees of spacing between segments
 
-    return data.map((item, index) => {
-      const percentage = item.percentage;
-      const sliceAngle = (percentage / 100) * 360 - spacing;
+    return safeData.map((item, index) => {
+      const percentage = Math.max(0, Math.min(100, item.percentage));
+      const sliceAngle = Math.max(0, (percentage / 100) * 360 - spacing);
+
+      if (!Number.isFinite(sliceAngle) || sliceAngle <= 0) {
+        return null;
+      }
       
       const startAngle = currentAngle;
       const endAngle = currentAngle + sliceAngle;
@@ -80,7 +94,7 @@ const DynamicPieChart: React.FC<DynamicPieChartProps> = ({
         color: getColor(index),
         data: item
       };
-    });
+    }).filter(Boolean) as { path: string; color: string; data: PieChartData }[];
   };
 
   const pieSlices = createPieSlices();
