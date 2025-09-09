@@ -206,6 +206,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           `${BASE_URL}/dashboard/dsi/${selectedProjectTab}`,
           `${BASE_URL}/dashboard/defect-type/${selectedProjectTab}`,
           `${BASE_URL}/dashboard/reopen-count_summary/${selectedProjectTab}`,
+          `${BASE_URL}/dashboard/reopen-multiple-summary/${selectedProjectTab}`,
           `${BASE_URL}/dashboard/defect-density/${selectedProjectTab}`,
           `${BASE_URL}/dashboard/module?projectId=${selectedProjectTab}`
         ];
@@ -237,6 +238,7 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           dsiData,
           defectTypeDataRes,
           reopenData,
+          reopenMultipleDataRes,
           defectDensityData,
           defectsByModuleDataRes
         ] = await Promise.all([
@@ -247,7 +249,8 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           fetchWithStatus(apiUrls[4]),
           fetchWithStatus(apiUrls[5]),
           fetchWithStatus(apiUrls[6]),
-          fetchWithStatus(apiUrls[7])
+          fetchWithStatus(apiUrls[7]),
+          fetchWithStatus(apiUrls[8])
         ]);
 
         // Suppressed response logs
@@ -341,22 +344,31 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setDefectStats(prev => ({ ...prev, density: 0 }));
         }
 
-        // 7. Reopen count summary
+        // 7. Reopen count summary (total) + distribution (multiple summary)
         if (reopenData && !reopenData.error) {
           const rd = reopenData.data;
           if (reopenData.message?.includes("No data found") || (Array.isArray(rd) && rd.length === 0)) {
             setReopenCountData("NO_DATA");
-          } else if (rd && typeof rd.reopenCount === 'number') {
-            // Backend returns a single total number. Convert to a chart-friendly single-slice dataset.
-            if (rd.reopenCount > 0) {
-              setReopenCountData([{ label: 'Reopened', count: rd.reopenCount }]);
-            } else {
-              setReopenCountData("NO_DATA");
-            }
-          } else if (rd && Array.isArray(rd) && rd.length > 0) {
-            setReopenCountData(rd);
           } else {
-            setReopenCountData(null);
+            // Prefer new distribution endpoint if available
+            const dist = reopenMultipleDataRes?.data;
+            if (dist && Array.isArray(dist) && dist.length > 0) {
+              // If all zero, treat as NO_DATA
+              const nonZero = dist.some((x: any) => (x.count || 0) > 0);
+              if (nonZero) {
+                setReopenCountData(dist);
+              } else {
+                setReopenCountData("NO_DATA");
+              }
+            } else if (rd && typeof rd.reopenCount === 'number') {
+              if (rd.reopenCount > 0) {
+                setReopenCountData([{ label: 'Reopened', count: rd.reopenCount }]);
+              } else {
+                setReopenCountData("NO_DATA");
+              }
+            } else {
+              setReopenCountData(null);
+            }
           }
         } else {
           setReopenCountData(null);
@@ -865,21 +877,23 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                       // Calculate total for percentages
                       const total = reopenCountData.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
 
-                      return reopenCountData.map((item: any, index: number) => {
-                        const count = item.count || 0;
-                        const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                        return (
-                          <View key={index} style={styles.pieChartLegendItem}>
-                            <View style={[
-                              styles.pieChartLegendDot,
-                              { backgroundColor: getColor(index) }
-                            ]} />
-                            <Text style={styles.pieChartLegendText}>
-                              {item.label || `${item.reopenCount || 0} times`}: {count} ({percentage}%)
-                            </Text>
-                          </View>
-                        );
-                      });
+                      return reopenCountData
+                        .filter((item: any) => (item.count || 0) > 0)
+                        .map((item: any, index: number) => {
+                          const count = item.count || 0;
+                          const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+                          return (
+                            <View key={index} style={styles.pieChartLegendItem}>
+                              <View style={[
+                                styles.pieChartLegendDot,
+                                { backgroundColor: getColor(index) }
+                              ]} />
+                              <Text style={styles.pieChartLegendText}>
+                                {item.label || `${item.reopenCount || 0} times`}: {count} ({percentage}%)
+                              </Text>
+                            </View>
+                          );
+                        });
                     })()
                   ) : (
                     // Fallback legend
