@@ -16,9 +16,9 @@ import { getDefectSeveritySummary } from '../api/dash_get';
 
 
 // Old: const BASE_URL = 'http://74.235.80.66:8087' (remote)
-// Old: const BASE_URL = 'http://192.168.1.45:3000' (no /api)
+// Old: const BASE_URL = 'http://192.168.1.85:3000' (no /api)
 // New local API base (with /api)
-const BASE_URL = 'http://192.168.1.45:3000/api';
+const BASE_URL = 'http://192.168.1.85:3000/api';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -141,8 +141,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
       // --- Additional Dashboard API Integrations ---
       // Use the first project as a sample for dashboard-wide stats (customize as needed)
-      if (projects.length > 0) {
-        const projectId = projects[0].id;
+      if (normalizedProjects.length > 0) {
+        const projectId = normalizedProjects[0].id;
         // Log API URLs only
         console.log('API CALL:', `/dashboard/defect-remark-ratio?projectId=${projectId}`);
         console.log('API CALL:', `/dashboard/dsi/${projectId}`);
@@ -162,13 +162,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
           defectsByModuleRes,
           severitySummaryRes
         ] = await Promise.all([
-          getDefectRemarkRatioByProjectId(projectId).catch(() => null),
-          getDefectSeverityIndex(projectId).catch(() => null),
-          getDefectTypeByProjectId(projectId).catch(() => null),
-          getReopenCountSummary(projectId).catch(() => null),
-          getDefectDensity(projectId).catch(() => null),
-          getDefectsByModule(projectId).catch(() => null),
-          getDefectSeveritySummary(projectId).catch(() => null),
+          getDefectRemarkRatioByProjectId(projectId, authToken).catch(() => null),
+          getDefectSeverityIndex(projectId, authToken).catch(() => null),
+          getDefectTypeByProjectId(projectId, authToken).catch(() => null),
+          getReopenCountSummary(projectId, authToken).catch(() => null),
+          getDefectDensity(projectId, authToken).catch(() => null),
+          getDefectsByModule(projectId, authToken).catch(() => null),
+          getDefectSeveritySummary(projectId, authToken).catch(() => null),
         ]);
         setRemarkRatio(remarkRatioRes);
         setSeverityIndex(severityIndexRes);
@@ -185,8 +185,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       }
 
       // BACKGROUND: Load colors after UI is shown (non-blocking)
-      if (projects.length > 0) {
-        loadProjectColors(projects, authToken);
+      if (normalizedProjects.length > 0) {
+        loadProjectColors(normalizedProjects, authToken);
       }
 
     } catch (error) {
@@ -202,11 +202,34 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
   // BACKGROUND: Load colors without blocking UI
   const loadProjectColors = useCallback(async (projects: any[], authToken: string) => {
     setLoadingColors(true);
-    const fetchOptions = {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
+    const mapColorNameToHex = (name?: string | null): string => {
+      const n = (name || '').toLowerCase();
+      if (n === 'red') return '#ce1111';
+      if (n === 'yellow') return '#eed61c';
+      if (n === 'green') return '#06ba0b';
+      return '#06ba0b';
+    };
+
+    const determineProjectColor = async (projectId: number): Promise<string> => {
+      try {
+        const [densityRes, dsiRes, remarkRes] = await Promise.all([
+          getDefectDensity(projectId, authToken).catch(() => null),
+          getDefectSeverityIndex(projectId, authToken).catch(() => null),
+          getDefectRemarkRatioByProjectId(projectId, authToken).catch(() => null)
+        ]);
+
+        const densityColorName = densityRes?.data?.color || null;
+        const dsiColorName = dsiRes?.data?.color || null;
+        const remarkColorName = remarkRes?.data?.color || null;
+
+        const colors = [densityColorName, dsiColorName, remarkColorName].map(c => (c || '').toLowerCase());
+
+        if (colors.includes('red')) return mapColorNameToHex('red');
+        if (colors.includes('yellow')) return mapColorNameToHex('yellow');
+        return mapColorNameToHex('green');
+      } catch {
+        return '#888';
+      }
     };
     // Load only first 5 colors immediately, rest in batches
     const priorityProjects = projects.slice(0, 5);
@@ -215,20 +238,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     try {
     // Load priority colors first
     const priorityPromises = priorityProjects.map(async (project: any) => {
-      try {
-        const colorUrl = `${BASE_URL}/dashboard/project-card-color/${project.id}`;
-        console.log('API CALL:', colorUrl);
-        const colorResponse = await fetch(colorUrl, fetchOptions);
-        if (!colorResponse.ok) {
-          console.log('Color status', project.id, colorResponse.status, await colorResponse.text());
-          throw new Error('Color fetch failed');
-        }
-        const colorRes = await colorResponse.json();
-        console.log('COLOR RES', project.id, colorRes);
-        return { projectId: project.id, color: parseColorString(colorRes.data.projectCardColor) };
-      } catch {
-        return { projectId: project.id, color: '#888' };
-      }
+      const color = await determineProjectColor(project.id);
+      return { projectId: project.id, color };
     });
 
       const priorityResults = await Promise.all(priorityPromises);
@@ -242,20 +253,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
       if (remainingProjects.length > 0) {
         setTimeout(async () => {
           const remainingPromises = remainingProjects.map(async (project: any) => {
-            try {
-              const colorUrl = `${BASE_URL}/dashboard/project-card-color/${project.id}`;
-              console.log('API CALL:', colorUrl);
-              const colorResponse = await fetch(colorUrl, fetchOptions);
-              if (!colorResponse.ok) {
-                console.log('Color status', project.id, colorResponse.status, await colorResponse.text());
-                throw new Error('Color fetch failed');
-              }
-              const colorRes = await colorResponse.json();
-              console.log('COLOR RES', project.id, colorRes);
-              return { projectId: project.id, color: parseColorString(colorRes.data.projectCardColor) };
-            } catch {
-              return { projectId: project.id, color: '#888' };
-            }
+            const color = await determineProjectColor(project.id);
+            return { projectId: project.id, color };
           });
 
           const remainingResults = await Promise.all(remainingPromises);
