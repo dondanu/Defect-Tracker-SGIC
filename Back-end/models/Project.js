@@ -57,6 +57,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(20),
       allowNull: true
     },
+    kloc: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        min: 0
+      }
+    },
     status: {
       type: DataTypes.ENUM('ACTIVE', 'INACTIVE', 'COMPLETED', 'ON_HOLD'),
       defaultValue: 'ACTIVE'
