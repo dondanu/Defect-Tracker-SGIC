@@ -343,10 +343,18 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
 
         // 7. Reopen count summary
         if (reopenData && !reopenData.error) {
-          if (reopenData.message?.includes("No data found") || (Array.isArray(reopenData.data) && reopenData.data.length === 0)) {
+          const rd = reopenData.data;
+          if (reopenData.message?.includes("No data found") || (Array.isArray(rd) && rd.length === 0)) {
             setReopenCountData("NO_DATA");
-          } else if (reopenData.data && Array.isArray(reopenData.data) && reopenData.data.length > 0) {
-            setReopenCountData(reopenData.data);
+          } else if (rd && typeof rd.reopenCount === 'number') {
+            // Backend returns a single total number. Convert to a chart-friendly single-slice dataset.
+            if (rd.reopenCount > 0) {
+              setReopenCountData([{ label: 'Reopened', count: rd.reopenCount }]);
+            } else {
+              setReopenCountData("NO_DATA");
+            }
+          } else if (rd && Array.isArray(rd) && rd.length > 0) {
+            setReopenCountData(rd);
           } else {
             setReopenCountData(null);
           }
@@ -354,14 +362,22 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setReopenCountData(null);
         }
 
-        // 8. Defect distribution by type
+        // 8. Defect distribution by type -> map backend shape to chart shape
         if (defectTypeDataRes && defectTypeDataRes.data && Array.isArray(defectTypeDataRes.data.defectTypes)) {
-          if (defectTypeDataRes.data.defectTypes.length > 0) {
+          const rawTypes = defectTypeDataRes.data.defectTypes;
+          if (rawTypes.length > 0) {
+            const total = rawTypes.reduce((sum: number, t: any) => sum + (t.count || t.value || 0), 0);
+            const mapped = rawTypes.map((t: any) => ({
+              defectType: t.defectType || t.name || 'Unknown',
+              defectCount: t.defectCount || t.count || t.value || 0,
+              percentage: total > 0 ? (((t.defectCount || t.count || t.value || 0) / total) * 100) : 0
+            }));
+            const mostCommon = mapped.reduce((max: any, curr: any) => curr.defectCount > (max?.defectCount || 0) ? curr : max, null);
             setDefectTypeData({
-              defectTypes: defectTypeDataRes.data.defectTypes,
-              totalDefectCount: defectTypeDataRes.data.totalDefectCount,
-              mostCommonDefectType: defectTypeDataRes.data.mostCommonDefectType,
-              mostCommonDefectCount: defectTypeDataRes.data.mostCommonDefectCount
+              defectTypes: mapped,
+              totalDefectCount: total,
+              mostCommonDefectType: mostCommon?.defectType || null,
+              mostCommonDefectCount: mostCommon?.defectCount || 0
             });
           } else {
             setDefectTypeData("INVALID_DATA");
@@ -370,10 +386,10 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
           setDefectTypeData(null);
         }
 
-        // 9. Defects by module
-        if (defectsByModuleDataRes && defectsByModuleDataRes.data && Array.isArray(defectsByModuleDataRes.data)) {
-          if (defectsByModuleDataRes.data.length > 0) {
-            setDefectsByModuleData(defectsByModuleDataRes.data);
+        // 9. Defects by module (expecting { data: { modules: [...] } })
+        if (defectsByModuleDataRes && defectsByModuleDataRes.data && Array.isArray(defectsByModuleDataRes.data.modules)) {
+          if (defectsByModuleDataRes.data.modules.length > 0) {
+            setDefectsByModuleData(defectsByModuleDataRes.data.modules);
           } else {
             setDefectsByModuleData("NO_DATA");
           }
@@ -820,21 +836,14 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                       (() => {
                         // Calculate total for percentages
                         const total = reopenCountData.reduce((sum: number, item: any) => sum + (item.count || 0), 0);
-
-                        return reopenCountData.map((item: any, index: number) => {
+                        return reopenCountData.map((item: any) => {
                           const count = item.count || 0;
-                          const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-                          return (
-                            <View key={index} style={styles.pieChartLegendItem}>
-                              <View style={[
-                                styles.pieChartLegendDot,
-                                { backgroundColor: getColor(index) }
-                              ]} />
-                              <Text style={styles.pieChartLegendText}>
-                                {item.label || `${item.reopenCount || 0} times`}: {count} ({percentage}%)
-                              </Text>
-                            </View>
-                          );
+                          const percentage = total > 0 ? ((count / total) * 100) : 0;
+                          return {
+                            defectType: item.label || `${item.reopenCount || 0} times`,
+                            defectCount: count,
+                            percentage
+                          };
                         });
                       })() : []
                     }
@@ -1190,12 +1199,12 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                     data={defectsByModuleData && Array.isArray(defectsByModuleData) ?
                       (() => {
                         // Calculate total for percentages
-                        const total = defectsByModuleData.reduce((sum, item) => sum + (item.value || item.defectCount || item.count || 0), 0);
+                        const total = defectsByModuleData.reduce((sum, item) => sum + (item.value || item.defectCount || item.count || item.defects || 0), 0);
 
                         return defectsByModuleData.map(item => ({
                           defectType: item.name || item.moduleName || item.module || 'Unknown Module',
-                          defectCount: item.value || item.defectCount || item.count || 0,
-                          percentage: total > 0 ? (((item.value || item.defectCount || item.count || 0) / total) * 100) : 0
+                          defectCount: item.value || item.defectCount || item.count || item.defects || 0,
+                          percentage: total > 0 ? (((item.value || item.defectCount || item.count || item.defects || 0) / total) * 100) : 0
                         }));
                       })() : []
                     }
@@ -1214,10 +1223,10 @@ const ProjectDetailScreen: React.FC<ProjectDetailScreenProps> = ({
                       };
 
                       // Calculate total for percentages
-                      const total = defectsByModuleData.reduce((sum: number, item: any) => sum + (item.value || item.defectCount || item.count || 0), 0);
+                      const total = defectsByModuleData.reduce((sum: number, item: any) => sum + (item.value || item.defectCount || item.count || item.defects || 0), 0);
 
                       return defectsByModuleData.map((item: any, index: number) => {
-                        const count = item.value || item.defectCount || item.count || 0;
+                        const count = item.value || item.defectCount || item.count || item.defects || 0;
                         const percentage = total > 0 ? ((count / total) * 100).toFixed(2) : '0.00';
                         const moduleName = item.name || item.moduleName || item.module || 'Unknown Module';
 
