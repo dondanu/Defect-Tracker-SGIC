@@ -121,14 +121,19 @@ class DashboardController {
       const highestWeight = (await Severity.max('weight', { where: { is_active: true } })) || 1;
       const max = total * highestWeight;
       const dsiPercentage = max > 0 ? Number(((weighted / max) * 100).toFixed(2)) : 0;
+      // Color bands for DSI:
+      // 0 - 25   -> green (Low Risk)
+      // 26 - 50  -> yellow (Medium Risk)
+      // 51 - 100 -> red (High Risk)
       let interpretation = 'Low Risk';
-      if (dsiPercentage >= 67) interpretation = 'High Risk';
-      else if (dsiPercentage >= 34) interpretation = 'Medium Risk';
+      let color = 'green';
+      if (dsiPercentage >= 51) { interpretation = 'High Risk'; color = 'red'; }
+      else if (dsiPercentage >= 26) { interpretation = 'Medium Risk'; color = 'yellow'; }
 
       res.status(200).json({
         success: true,
         message: 'DSI calculated successfully',
-        data: { dsiPercentage, interpretation }
+        data: { dsiPercentage, interpretation, color }
       });
     } catch (error) {
       next(error);
@@ -219,11 +224,33 @@ class DashboardController {
   async getDefectDensity(req, res, next) {
     try {
       const { projectId } = req.params;
-      const { Module } = require('../models');
+      const { Project } = require('../models');
       const defects = await Defect.count({ where: { project_id: projectId, is_active: true } });
-      const modules = await Module.count({ where: { project_id: projectId, is_active: true } });
-      const density = modules > 0 ? Number((defects / modules).toFixed(2)) : Number(defects.toFixed(2));
-      res.status(200).json({ success: true, message: 'Defect density calculated successfully', data: { defectDensity: density } });
+      const project = await Project.findByPk(projectId, { attributes: ['id', 'kloc'] });
+
+      const klocRaw = project?.kloc;
+      const kloc = klocRaw !== null && klocRaw !== undefined ? Number(klocRaw) : null;
+      const density = kloc && kloc > 0 ? Number((defects / kloc).toFixed(2)) : null;
+
+      let category = null;
+      let color = null;
+      if (density !== null) {
+        if (density <= 1) { category = 'Good'; color = 'green'; }
+        else if (density <= 5) { category = 'Moderate Quality'; color = 'yellow'; }
+        else { category = 'High Risk'; color = 'red'; }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Defect density calculated successfully',
+        data: {
+          defectDensity: density,
+          sizeMetricKLOC: kloc,
+          totals: { defects },
+          category,
+          color
+        }
+      });
     } catch (error) { next(error); }
   }
 
