@@ -94,8 +94,8 @@ class EmailService {
         const fallbackTransporter = nodemailer.createTransport({
           service: 'gmail',
           auth: {
-            user: process.env.GMAIL_USER || 'your-email@gmail.com',
-            pass: process.env.GMAIL_APP_PASSWORD || 'your-app-password'
+            user: process.env.SMTP_USER || 'your-email@gmail.com',
+            pass: process.env.SMTP_PASS || 'your-app-password'
           },
           tls: {
             rejectUnauthorized: false
@@ -103,7 +103,7 @@ class EmailService {
         });
 
         const mailOptions = {
-          from: process.env.GMAIL_USER || 'your-email@gmail.com',
+          from: process.env.SMTP_USER || 'your-email@gmail.com',
           to: Array.isArray(to) ? to.join(', ') : to,
           subject: subject,
           html: html,

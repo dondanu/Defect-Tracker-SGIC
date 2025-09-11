@@ -25,6 +25,9 @@ router.get('/module', dashboardController.getDefectsByModule);
 // GET /api/dashboard/reopen-count_summary/:projectId
 router.get('/reopen-count_summary/:projectId', validateProjectId, handleValidationErrors, checkProjectAccess, dashboardController.getReopenCountSummary);
 
+// GET /api/dashboard/reopen-multiple-summary/:projectId
+router.get('/reopen-multiple-summary/:projectId', validateProjectId, handleValidationErrors, checkProjectAccess, dashboardController.getReopenMultipleSummary);
+
 // GET /api/dashboard/defect-density/:projectId
 router.get('/defect-density/:projectId', validateProjectId, handleValidationErrors, checkProjectAccess, dashboardController.getDefectDensity);
 
