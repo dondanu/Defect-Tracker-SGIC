@@ -1,5 +1,5 @@
 const { Sequelize } = require('sequelize');
-const { Defect, Severity, DefectStatus } = require('../models');
+const { Defect, Severity, DefectStatus, DefectHistory } = require('../models');
 
 // Helper function to compute DSI using severity.weight and highest possible weight
 const computeDSIInternal = async (projectId) => {
@@ -218,6 +218,50 @@ class DashboardController {
       const count = ids.length > 0 ? await Defect.count({ where: { project_id: projectId, is_active: true, defect_status_id: ids } }) : 0;
       res.status(200).json({ success: true, message: 'Reopen count summary retrieved successfully', data: { reopenCount: count } });
     } catch (error) { next(error); }
+  }
+
+  // GET /api/dashboard/reopen-multiple-summary/:projectId
+  async getReopenMultipleSummary(req, res, next) {
+    try {
+      const { projectId } = req.params;
+      // Find all reopen transitions in history for defects of this project
+      const historyRows = await DefectHistory.findAll({
+        attributes: [
+          'defect_id',
+          [Sequelize.fn('COUNT', Sequelize.col('DefectHistory.id')), 'reopenCount']
+        ],
+        include: [{
+          model: Defect,
+          as: 'defect',
+          attributes: [],
+          where: { project_id: projectId, is_active: true }
+        }],
+        where: Sequelize.where(
+          Sequelize.fn('LOWER', Sequelize.col('new_value')),
+          { [require('sequelize').Op.like]: '%reopen%'
+          }
+        ),
+        group: ['defect_id'],
+        raw: true
+      });
+
+      // Bucketize counts: 1,2,3,4,5,5+
+      const buckets = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, '5+': 0 };
+      historyRows.forEach(r => {
+        const c = parseInt(r.reopenCount, 10) || 0;
+        if (c <= 0) return;
+        if (c >= 6) buckets['5+'] += 1;
+        else if (c >= 5) buckets[5] += 1;
+        else buckets[c] += 1;
+      });
+
+      const data = [1,2,3,4,5].map(n => ({ label: `${n} ${n === 1 ? 'time' : 'times'}`, count: buckets[n] }))
+        .concat([{ label: '5+ times', count: buckets['5+'] }]);
+
+      res.status(200).json({ status: 'OK', message: 'Retrieved successfully.', data, statusCode: 2000 });
+    } catch (error) {
+      next(error);
+    }
   }
 
   // GET /api/dashboard/defect-density/:projectId
