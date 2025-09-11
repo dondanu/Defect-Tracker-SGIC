@@ -3,6 +3,7 @@ import DashboardScreen from './src/components/DashboardScreen';
 import Profile from './src/components/Profile';
 import LoginScreen from './src/components/LoginScreen';
 import ProjectDetailScreen from './src/components/ProjectDetailScreen';
+import WelcomeScreen from './src/components/WelcomeScreen';
 
 // Suppress React Native error screens for API errors
 import { LogBox } from 'react-native';
@@ -10,6 +11,7 @@ import { LogBox } from 'react-native';
 type Screen = 'dashboard' | 'profile' | 'project';
 
 const App: React.FC = () => {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
@@ -48,6 +50,10 @@ const App: React.FC = () => {
     setSelectedProject({ id: projectId, name: projectName });
     setCurrentScreen('project');
   };
+
+  if (showWelcome) {
+    return <WelcomeScreen onContinue={() => setShowWelcome(false)} />;
+  }
 
   if (!isLoggedIn) {
     return <LoginScreen onLogin={handleLogin} />;
