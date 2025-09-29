@@ -1,0 +1,10 @@
+R_DEF: Internal format may change without notice
+local
+drawable ic_fp_40px
+id cancel_button
+id fingerprint_container
+id fingerprint_description
+id fingerprint_error
+id fingerprint_icon
+id fingerprint_sensor_description
+layout fingerprint_dialog

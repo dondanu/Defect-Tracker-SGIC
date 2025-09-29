@@ -21,7 +21,7 @@ const screenWidth = Dimensions.get('window').width;
 
 // Old remote: 'http://74.235.80.66:8087'
 // New local API base
-const BASE_URL = (process as any)?.env?.VITE_BASE_URL || 'http://192.168.1.85:3000/api';
+const BASE_URL = (process as any)?.env?.VITE_BASE_URL || 'http://192.168.1.168:3000/api';
 
 interface ProjectDetailScreenProps {
   projectId: number;

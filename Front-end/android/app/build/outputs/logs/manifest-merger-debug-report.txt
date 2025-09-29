@@ -117,13 +117,13 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Da
 	tools:ignore
 		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\debug\AndroidManifest.xml:10:9-48
 	android:roundIcon
-		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-41
-		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-41
+		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-52
+		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-52
 	tools:targetApi
 		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\debug\AndroidManifest.xml:9:9-29
 	android:icon
-		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-36
-		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-36
+		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-41
+		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-41
 	android:allowBackup
 		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:10:7-34
 		ADDED from C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:10:7-34

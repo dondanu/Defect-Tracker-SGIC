@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.dtr"
-4    android:versionCode="1"
-5    android:versionName="1.0" >
+4    android:versionCode="2"
+5    android:versionName="1.0.1" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="21"
@@ -30,12 +30,12 @@
 19        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 19-->[androidx.core:core:1.7.0] C:\Users\Danu\.gradle\caches\transforms-3\81ae5834d915be8d5e195feb97d2e6bf\transformed\core-1.7.0\AndroidManifest.xml:24:18-86
 20        android:debuggable="true"
-21        android:icon="@drawable/log4"
-21-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-36
+21        android:icon="@mipmap/ic_launcher"
+21-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:8:7-41
 22        android:label="@string/app_name"
 22-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:7:7-39
-23        android:roundIcon="@drawable/log4"
-23-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-41
+23        android:roundIcon="@mipmap/ic_launcher_round"
+23-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:9:7-52
 24        android:theme="@style/AppTheme"
 24-->C:\Users\Danu\Desktop\Defect-Tracker-SGIC\Front-end\android\app\src\main\AndroidManifest.xml:11:7-38
 25        android:usesCleartextTraffic="true" >
