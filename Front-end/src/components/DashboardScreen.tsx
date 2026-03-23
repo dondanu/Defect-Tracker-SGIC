@@ -16,9 +16,9 @@ import { getDefectSeveritySummary } from '../api/dash_get';
 
 
 // Old: const BASE_URL = 'http://74.235.80.66:8087' (remote)
-// Old: const BASE_URL = 'http://192.168.1.168:3000' (no /api)
+// Old: const BASE_URL = 'http://192.168.1.36:3000' (no /api)
 // New local API base (with /api)
-const BASE_URL = 'http://192.168.1.168:3000/api';
+const BASE_URL = 'http://192.168.1.36:3000/api';
 
 const screenWidth = Dimensions.get('window').width;
 

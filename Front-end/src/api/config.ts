@@ -8,7 +8,7 @@ export const API_CONFIG = {
   
   // Development - Physical Device (replace with your machine's IP)
   developmentPhysical: {
-    baseURL: "http://192.168.1.168:3000/api/", // Change this to your machine's IP
+    baseURL: "http://192.168.1.36:3000/api/", // Change this to your machine's IP
     timeout: 10000,
   },
   
