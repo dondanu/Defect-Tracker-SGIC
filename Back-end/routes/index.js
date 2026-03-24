@@ -11,17 +11,7 @@ const configRoutes = require('./config');
 const dashboardRoutes = require('./dashboard');
 const releaseRoutes = require('./releases');
 
-// Route definitions
-router.use('/auth', authRoutes);
-router.use('/users', userRoutes);
-router.use('/projects', projectRoutes);
-router.use('/projects', defectRoutes);
-router.use('/', lookupRoutes);
-router.use('/config', configRoutes);
-router.use('/dashboard', dashboardRoutes);
-router.use('/releases', releaseRoutes);
-
-// Health check endpoint
+// Health check endpoint (MUST be before lookupRoutes)
 router.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -31,7 +21,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// API info endpoint
+// API info endpoint (MUST be before lookupRoutes)
 router.get('/', (req, res) => {
   res.status(200).json({
     success: true,
@@ -48,5 +38,16 @@ router.get('/', (req, res) => {
     }
   });
 });
+
+// Route definitions
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/projects', projectRoutes);
+router.use('/projects', defectRoutes);
+router.use('/config', configRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/releases', releaseRoutes);
+// IMPORTANT: Keep lookupRoutes LAST since it's mounted at root '/' and has global auth
+router.use('/', lookupRoutes);
 
 module.exports = router;
